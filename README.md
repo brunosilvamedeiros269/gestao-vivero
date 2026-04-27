@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌿 Enterprise Nursery Dashboard (Gestão Vivero)
 
-## Getting Started
+Una solución integral y moderna para la gestión botánica y operacional de viveros de alta densidad, impulsada por Inteligencia Artificial.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
+![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?style=for-the-badge&logo=supabase)
+![OpenAI](https://img.shields.io/badge/OpenAI-IA_Integration-412991?style=for-the-badge&logo=openai)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-Styling-38B2AC?style=for-the-badge&logo=tailwind-css)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Características Principales
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 🧬 Catálogo de Especies Inteligente
+- **Enriquecimiento con IA**: Autocompletado de datos botánicos (clima, suelo, pH, riego) usando modelos de lenguaje avanzados.
+- **Búsqueda Visual**: Integración automática de fotos botánicas reales.
+- **Ficha Técnica Premium**: Gestión de ciclos de germinación, floración y categorías de mercado.
+- **Procesamiento en Lote**: Actualización masiva de catálogo mediante IA con barra de progreso en tiempo real.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🏗️ Gestión Operacional (BETA)
+- **Control de Lotes**: Seguimiento detallado de lotes de cultivo desde la siembra.
+- **Inventario Dinámico**: Gestión de insumos y plantas listas para la venta.
+- **Dashboard Administrativo**: Panel de control con métricas clave y estados de salud del vivero.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🌐 Experiencia de Usuario (UX)
+- **Multi-idioma**: Soporte nativo para Español, Portugués e Inglés.
+- **Diseño Glassmorphism**: Interfaz moderna, limpia y profesional optimizada para escritorio.
+- **Mobile Responsive**: Acceso desde cualquier dispositivo en el campo.
 
-## Learn More
+## 🚀 Tecnologías Utilizadas
 
-To learn more about Next.js, take a look at the following resources:
+- **Frontend**: Next.js 14 (App Router)
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
+- **IA**: OpenAI API (GPT-4o para análisis botánico)
+- **Componentes**: Lucide React + Tailwind CSS
+- **Contexto**: Multi-language Context API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Instalación y Configuración
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/brunosilvamedeiros269/gestao-vivero.git
+   cd gestao-vivero
+   ```
 
-## Deploy on Vercel
+2. **Instalar dependências:**
+   ```bash
+   npm install
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. **Configurar Variáveis de Ambiente:**
+   Cree un arquivo `.env.local` na raíz do projeto com:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_clave_anon_de_supabase
+   OPENAI_API_KEY=tu_clave_de_openai
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. **Executar em modo desenvolvimento:**
+   ```bash
+   npm run dev
+   ```
+
+## 📸 Capturas de Pantalla
+*(Próximamente)*
+
+---
+Desarrollado con ❤️ para la gestión botánica avanzada.
