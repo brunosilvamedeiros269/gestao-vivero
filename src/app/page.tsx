@@ -32,6 +32,7 @@ export default function TelaProdutorApp() {
   // Form: Novo Lote
   const [novoLoteIdf, setNovoLoteIdf] = useState('');
   const [novoLoteEspecie, setNovoLoteEspecie] = useState('');
+  const [isIndividual, setIsIndividual] = useState(false);
 
   // Form: Adicionar Mudas (BOM - Receita)
   const [addMudasQtd, setAddMudasQtd] = useState('');
@@ -109,9 +110,10 @@ export default function TelaProdutorApp() {
       const { error } = await supabase.from('lotes_plantio').insert({
         identificacao_lote: novoLoteIdf,
         especie_id: novoLoteEspecie,
-        quantidade_plantada: 0, // Criando Vazio
-        status: 'germinando',
-        data_plantio: new Date().toISOString().split('T')[0] // Garante que a data não seja nula
+        quantidade_plantada: isIndividual ? 1 : 0,
+        status: isIndividual ? 'em_crescimento' : 'germinando',
+        data_plantio: new Date().toISOString().split('T')[0],
+        tipo_gestao: isIndividual ? 'individual' : 'lote'
       });
       if (error) throw error;
       alert("Placa do Lote criada com sucesso!");
@@ -377,10 +379,22 @@ export default function TelaProdutorApp() {
                     <span className="text-[10px] text-secondary font-bold tracking-widest uppercase bg-surface-container px-2 py-0.5 rounded-md">LOTE: {l.identificacao_lote}</span>
                   </div>
                 </div>
-                <div className="bg-surface-container-high text-on-surface px-3 py-1.5 rounded-2xl text-xs font-black text-center shadow-sm min-w-[50px]">
+                <div className="bg-surface-container-high text-on-surface px-3 py-1.5 rounded-2xl text-xs font-black text-center shadow-sm min-w-[50px] relative">
+                  {l.tipo_gestao === 'individual' && (
+                    <div className="absolute -top-2 -left-2 bg-amber-500 text-white p-1 rounded-full shadow-lg">
+                      <Sparkles size={10} />
+                    </div>
+                  )}
                   {diasVida}<br/><span className="text-[8px] font-bold text-secondary uppercase tracking-tighter">Dias</span>
                 </div>
               </div>
+
+              {l.tipo_gestao === 'individual' && (
+                <div className="mb-4 flex items-center gap-2 bg-primary/10 text-primary px-3 py-2 rounded-xl border border-primary/20">
+                  <Flower2 size={16} />
+                  <span className="text-xs font-bold uppercase tracking-widest italic">Edição Especial / Única</span>
+                </div>
+              )}
 
               {l.quantidade_plantada === 0 ? (
                 <div className="bg-amber-500/10 text-amber-500 font-bold text-[11px] p-4 rounded-2xl border border-amber-500/20 flex items-center gap-3 mt-2">
@@ -514,7 +528,20 @@ export default function TelaProdutorApp() {
                 </div>
                 <div>
                    <label className="text-sm font-bold text-secondary mb-1 block">Nome / Tag Física do Lote</label>
-                   <input required value={novoLoteIdf} onChange={e=>setNovoLoteIdf(e.target.value)} placeholder="Ex: MESA-A1-TOMATE" className="w-full bg-surface border border-surface-container-highest text-on-surface rounded-xl px-4 py-4 outline-none font-bold uppercase" />
+                   <input required value={novoLoteIdf} onChange={e=>setNovoLoteIdf(e.target.value)} placeholder={isIndividual ? "Ex: ORQUIDEA-AZUL-01" : "Ex: MESA-A1-TOMATE"} className="w-full bg-surface border border-surface-container-highest text-on-surface rounded-xl px-4 py-4 outline-none font-bold uppercase" />
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+                   <input 
+                     type="checkbox" 
+                     id="isIndividual" 
+                     checked={isIndividual} 
+                     onChange={e => setIsIndividual(e.target.checked)}
+                     className="w-5 h-5 accent-primary"
+                   />
+                   <label htmlFor="isIndividual" className="text-sm font-bold text-on-surface cursor-pointer select-none">
+                     Esta é uma <span className="text-primary underline decoration-primary/30">Planta Individual</span> (VIP)
+                   </label>
                 </div>
                 
                 <button type="submit" className="w-full bg-primary text-on-primary py-4 mt-6 rounded-xl font-bold text-lg shadow-md hover:scale-[1.01] transition">Criar Bancada (Vazia)</button>

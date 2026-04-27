@@ -16,6 +16,9 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
   const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiKeys, setApiKeys] = useState<any>({});
+  const [fotosEvolucao, setFotosEvolucao] = useState<any[]>([]);
+  const [analisandoId, setAnalisandoId] = useState<string | null>(null);
+  const [analiseIA, setAnaliseIA] = useState<any>(null);
 
   // Modal State
   const [modalAberto, setModalAberto] = useState(false);
@@ -79,8 +82,17 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
       }
 
       // 4. Buscar Clientes Atacado
-      const { data: cli } = await supabase.from('clientes_atacado').select('*').order('nome_empresa');
       if (cli) setClientes(cli);
+
+      // 5. Buscar Fotos de Evolução (Tarefas diárias que têm foto)
+      const { data: fotos } = await supabase
+        .from('lote_diario_tarefas')
+        .select('*')
+        .eq('lote_plantio_id', id)
+        .not('foto_url', 'is', null)
+        .order('created_at', { ascending: false });
+      
+      if (fotos) setFotosEvolucao(fotos);
     } catch (e) {
       console.error(e);
     } finally {
@@ -289,6 +301,70 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
                  </div>
                  
                </div>
+            </div>
+
+            {/* Galeria de Evolução Visual */}
+            <div className="bg-surface-container-lowest border border-surface-container-highest p-6 rounded-3xl shadow-sm mt-8">
+              <h2 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                <History size={24} className="text-primary"/> Evolução Visual e Diagnóstico IA
+              </h2>
+
+              {fotosEvolucao.length === 0 ? (
+                <div className="text-center py-12 bg-surface rounded-2xl border-2 border-dashed border-surface-container">
+                  <p className="text-secondary italic">Nenhuma foto registrada para este lote ainda.</p>
+                  <p className="text-[10px] text-secondary mt-1">Tire fotos durante as tarefas diárias no App para ver a evolução aqui.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {fotosEvolucao.map((foto) => (
+                    <div key={foto.id} className="bg-surface rounded-2xl overflow-hidden border border-surface-container shadow-sm group">
+                      <div className="relative aspect-video w-full bg-black">
+                        <img 
+                          src={foto.foto_url} 
+                          alt="Evolução" 
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] text-white font-mono">
+                          {new Date(foto.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-3">
+                        <div>
+                          <p className="text-[10px] font-bold text-primary uppercase tracking-tighter">{foto.tarefa_realizada}</p>
+                          <p className="text-xs text-on-surface-variant line-clamp-2">{foto.observacoes || 'Sem observações.'}</p>
+                        </div>
+
+                        {analiseIA?.taskId === foto.id ? (
+                          <div className="bg-primary/5 p-3 rounded-xl border border-primary/20 animate-fade-in">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-primary">Diagnóstico IA</span>
+                              <span className="text-xs font-black text-primary">{analiseIA.saude}% Saúde</span>
+                            </div>
+                            <p className="text-[11px] font-medium leading-tight">{analiseIA.diagnostico}</p>
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {analiseIA.sinais_alerta?.map((s: string, idx: number) => (
+                                <span key={idx} className="bg-error/10 text-error text-[9px] px-1.5 py-0.5 rounded border border-error/20 font-bold">{s}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => analisarComIA(foto.foto_url, foto.id)}
+                            disabled={!!analisandoId}
+                            className="w-full py-2 bg-surface-container-high hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+                          >
+                            {analisandoId === foto.id ? (
+                              <span className="animate-pulse">Analisando...</span>
+                            ) : (
+                              <>💡 Analisar Saúde com IA</>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
         </div>

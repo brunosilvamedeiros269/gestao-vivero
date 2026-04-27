@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Gestao Vivero',
   webDir: 'out',
   server: {
-    url: 'https://vivero-pro.vercel.app',
+    url: 'https://gestao-vivero.vercel.app/',
     cleartext: true
   }
 };
