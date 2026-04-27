@@ -24,6 +24,7 @@ export default function TelaProdutorApp() {
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoObs, setFotoObs] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [pedirIAImediato, setPedirIAImediato] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form: Morte Parcial
@@ -189,12 +190,19 @@ export default function TelaProdutorApp() {
 
       const { data: { publicUrl } } = supabase.storage.from('fotos_evolutivas').getPublicUrl(filePath);
 
-      await supabase.from('lote_diario_tarefas').insert({
+      const { data: diarioInserted, error: diarioError } = await supabase.from('lote_diario_tarefas').insert({
         lote_plantio_id: loteAtivoId.id,
         tipo_tarefa: 'Laudo',
         observacao: fotoObs,
         foto_url: publicUrl
-      });
+      }).select().single();
+
+      if (diarioError) throw diarioError;
+
+      // Se o usuário pedir análise imediata por IA
+      if (pedirIAImediato && diarioInserted) {
+        await handleAnalisarIA(diarioInserted);
+      }
 
       alert('Laudo salvo com sucesso!');
       setSheetView('menu');
@@ -531,16 +539,17 @@ export default function TelaProdutorApp() {
                    <input required value={novoLoteIdf} onChange={e=>setNovoLoteIdf(e.target.value)} placeholder={isIndividual ? "Ex: ORQUIDEA-AZUL-01" : "Ex: MESA-A1-TOMATE"} className="w-full bg-surface border border-surface-container-highest text-on-surface rounded-xl px-4 py-4 outline-none font-bold uppercase" />
                 </div>
 
-                <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+                <div className="flex items-center gap-3 p-5 bg-amber-50 border-2 border-amber-200 rounded-3xl shadow-sm">
                    <input 
                      type="checkbox" 
                      id="isIndividual" 
                      checked={isIndividual} 
                      onChange={e => setIsIndividual(e.target.checked)}
-                     className="w-5 h-5 accent-primary"
+                     className="w-6 h-6 accent-amber-600 rounded-lg"
                    />
-                   <label htmlFor="isIndividual" className="text-sm font-bold text-on-surface cursor-pointer select-none">
-                     Esta é uma <span className="text-primary underline decoration-primary/30">Planta Individual</span> (VIP)
+                   <label htmlFor="isIndividual" className="flex-1 cursor-pointer select-none">
+                     <span className="block text-sm font-black text-amber-900 uppercase tracking-tight">Planta Individual (VIP)</span>
+                     <span className="block text-[10px] text-amber-700 leading-tight">Ideal para coleções ou plantas únicas que não são lotes de produção.</span>
                    </label>
                 </div>
                 
@@ -679,6 +688,19 @@ export default function TelaProdutorApp() {
                 <div>
                    <label className="text-sm font-bold text-secondary mb-1 block">Laudo/Comentário (opcional)</label>
                    <textarea rows={3} value={fotoObs} onChange={e=>setFotoObs(e.target.value)} placeholder="Folhas com manchas brancas..." className="w-full bg-surface-container-lowest border border-surface-container text-on-surface rounded-xl p-4 outline-none resize-none"></textarea>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-2xl">
+                  <input 
+                    type="checkbox" 
+                    id="pedirIA" 
+                    checked={pedirIAImediato} 
+                    onChange={e => setPedirIAImediato(e.target.checked)}
+                    className="w-5 h-5 accent-purple-600"
+                  />
+                  <label htmlFor="pedirIA" className="text-sm font-bold text-purple-900 flex items-center gap-2 cursor-pointer">
+                    <Sparkles size={16} className="text-purple-600"/> Pedir Diagnóstico por IA agora
+                  </label>
                 </div>
                 
                 <button type="submit" disabled={!fotoFile || uploading} className="w-full bg-primary text-on-primary py-4 rounded-xl font-bold disabled:opacity-50 shadow-md">
