@@ -685,31 +685,32 @@ export default function TelaProdutorApp() {
                   <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setFotoFile(e.target.files?.[0] || null)} />
                 </div>
 
-                <div>
-                   <label className="text-sm font-bold text-secondary mb-1 block">Laudo/Comentário (opcional)</label>
-                   <textarea rows={3} value={fotoObs} onChange={e=>setFotoObs(e.target.value)} placeholder="Folhas com manchas brancas..." className="w-full bg-surface-container-lowest border border-surface-container text-on-surface rounded-xl p-4 outline-none resize-none"></textarea>
-                </div>
+                {/* BOTÃO DE IA MOVIDO PARA O TOPO DO FORMULÁRIO PARA GARANTIR VISIBILIDADE */}
+                <div className="mb-4 flex items-center gap-3 p-4 bg-gradient-to-r from-purple-100 to-indigo-100 border-2 border-purple-400 rounded-3xl shadow-md animate-pulse">
+                   <input 
+                     type="checkbox" 
+                     id="pedirIA" 
+                     checked={pedirIAImediato} 
+                     onChange={e => setPedirIAImediato(e.target.checked)}
+                     className="w-8 h-8 accent-purple-600 rounded-lg cursor-pointer"
+                   />
+                   <label htmlFor="pedirIA" className="flex-1 cursor-pointer select-none">
+                     <div className="flex items-center gap-2">
+                       <Sparkles size={22} className="text-purple-600"/>
+                       <span className="text-[14px] font-black text-purple-900 uppercase tracking-tighter">ANÁLISE DE SAÚDE IA</span>
+                     </div>
+                     <span className="block text-[11px] text-purple-800 font-bold leading-tight">Clique aqui para receber diagnóstico automático.</span>
+                   </label>
+                 </div>
 
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-3xl shadow-sm">
-                  <input 
-                    type="checkbox" 
-                    id="pedirIA" 
-                    checked={pedirIAImediato} 
-                    onChange={e => setPedirIAImediato(e.target.checked)}
-                    className="w-6 h-6 accent-purple-600 rounded-lg cursor-pointer"
-                  />
-                  <label htmlFor="pedirIA" className="flex-1 cursor-pointer select-none">
-                    <div className="flex items-center gap-2">
-                      <Sparkles size={18} className="text-purple-600 animate-pulse"/>
-                      <span className="text-[12px] font-black text-purple-900 uppercase tracking-tight">Análise de Saúde via IA</span>
-                    </div>
-                    <span className="block text-[10px] text-purple-700 leading-tight">Detecta pragas e deficiências nutricionais instantaneamente.</span>
-                  </label>
-                </div>
-                
-                <button type="submit" disabled={!fotoFile || uploading} className="w-full bg-primary text-on-primary py-4 rounded-xl font-bold disabled:opacity-50 shadow-md">
-                  {uploading ? 'Salvando imagem...' : 'Salvar no Prontuário'}
-                </button>
+                 <div>
+                    <label className="text-sm font-bold text-secondary mb-1 block">Laudo/Comentário (opcional)</label>
+                    <textarea rows={3} value={fotoObs} onChange={e=>setFotoObs(e.target.value)} placeholder="Folhas com manchas brancas..." className="w-full bg-surface-container-lowest border border-surface-container text-on-surface rounded-xl p-4 outline-none resize-none"></textarea>
+                 </div>
+                 
+                 <button type="submit" disabled={!fotoFile || uploading} className="w-full bg-primary text-on-primary py-4 rounded-xl font-bold disabled:opacity-50 shadow-md text-lg">
+                   {uploading ? 'Processando...' : 'Salvar no Prontuário'}
+                 </button>
               </form>
             )}
 
