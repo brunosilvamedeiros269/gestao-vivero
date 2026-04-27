@@ -690,16 +690,20 @@ export default function TelaProdutorApp() {
                    <textarea rows={3} value={fotoObs} onChange={e=>setFotoObs(e.target.value)} placeholder="Folhas com manchas brancas..." className="w-full bg-surface-container-lowest border border-surface-container text-on-surface rounded-xl p-4 outline-none resize-none"></textarea>
                 </div>
 
-                <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-2xl">
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-3xl shadow-sm">
                   <input 
                     type="checkbox" 
                     id="pedirIA" 
                     checked={pedirIAImediato} 
                     onChange={e => setPedirIAImediato(e.target.checked)}
-                    className="w-5 h-5 accent-purple-600"
+                    className="w-6 h-6 accent-purple-600 rounded-lg cursor-pointer"
                   />
-                  <label htmlFor="pedirIA" className="text-sm font-bold text-purple-900 flex items-center gap-2 cursor-pointer">
-                    <Sparkles size={16} className="text-purple-600"/> Pedir Diagnóstico por IA agora
+                  <label htmlFor="pedirIA" className="flex-1 cursor-pointer select-none">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={18} className="text-purple-600 animate-pulse"/>
+                      <span className="text-[12px] font-black text-purple-900 uppercase tracking-tight">Análise de Saúde via IA</span>
+                    </div>
+                    <span className="block text-[10px] text-purple-700 leading-tight">Detecta pragas e deficiências nutricionais instantaneamente.</span>
                   </label>
                 </div>
                 
