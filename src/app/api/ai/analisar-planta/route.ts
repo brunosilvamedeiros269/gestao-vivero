@@ -10,47 +10,43 @@ export async function POST(req: Request) {
   try {
     const { fotoUrl, especie, diasPlantio } = await req.json();
 
-    if (!fotoUrl || !especie) {
-      return NextResponse.json({ error: 'Faltam dados da planta ou foto.' }, { status: 400 });
+    // 1. Buscar Chaves de API do Banco de Dados
+    const { data: configs } = await supabase.from('configuracoes').select('api_keys, idioma').order('id', { ascending: false });
+    const config = configs?.find(c => c.api_keys && Object.keys(c.api_keys).length > 0) || configs?.[0];
+    
+    if (!config?.api_keys) {
+      return NextResponse.json({ error: 'Configure as chaves de IA nas configurações primeiro.' }, { status: 400 });
     }
 
-    const { data: config } = await supabase.from('configuracoes').select('api_keys').limit(1).single();
-    const keys = config?.api_keys;
-    const provider = keys?.ai_provider || 'gemini';
+    const keys = config.api_keys;
+    const provider = keys.ai_provider || (keys.groq_api_key ? 'groq' : keys.openai_api_key ? 'openai' : 'gemini');
 
-    if (!keys) {
-      return NextResponse.json({ error: 'Configurações de IA não encontradas.' }, { status: 401 });
-    }
+    // 2. Converter imagem para Base64
+    const imageRes = await fetch(fotoUrl);
+    const imageBuffer = await imageRes.arrayBuffer();
+    const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+    const mimeType = imageRes.headers.get('content-type') || 'image/jpeg';
 
-    // Download da imagem para buffer
-    const imageResp = await fetch(fotoUrl);
-    if (!imageResp.ok) throw new Error('Erro ao baixar imagem.');
-    const arrayBuffer = await imageResp.arrayBuffer();
-    const base64Image = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = imageResp.headers.get('content-type') || 'image/jpeg';
+    // 3. Chamar IA
+    const prompt = `Analise o crescimento deste lote de ${especie}, que foi plantado há ${diasPlantio} dias.
+    Retorne um JSON com os campos:
+    - 'desvio_desenvolvimento': string (se está atrasado, no prazo ou adiantado)
+    - 'estado_saude': string (ex: Saudável, Estressada, Com Pragas)
+    - 'doenca_detectada': string (Nome da doença ou 'Nenhuma')
+    - 'acao_sugerida': string (O que o produtor deve fazer agora)`;
 
-    const prompt = `Você é um Engenheiro Agrônomo especialista em viveiros na Colômbia. 
- Analise a foto de um lote de ${especie} com ${diasPlantio} dias de vida.
- Responda EXATAMENTE neste formato JSON, sem marcação markdown adicional:
- {
-   "desvio_desenvolvimento": "Normal ou Atrasado (Baseado na idade esperada)",
-   "estado_saude": "Saudável ou Infermidade Detectada",
-   "doenca_detectada": "Se houver, nome da praga/fungo. Senão, 'Nenhuma'",
-   "acao_sugerida": "Ação curta que o produtor deve tomar hoje"
- }`;
-
-    const responseText = await chamarIA({ 
-        provider, 
-        keys, 
-        prompt, 
-        imageBase64: base64Image, 
-        mimeType 
+    const responseText = await chamarIA({
+      provider: provider as any,
+      keys,
+      prompt,
+      imageBase64,
+      mimeType,
+      language: config.idioma || 'pt'
     });
 
-    return NextResponse.json({ success: true, analise: JSON.parse(responseText) });
-    
+    return NextResponse.json({ success: true, analise: JSON.parse(responseText || '{}') });
   } catch (error: any) {
-    console.error("Erro na IA:", error);
-    return NextResponse.json({ error: error.message || 'Falha ao analisar a foto.' }, { status: 500 });
+    console.error('Erro na análise IA:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
