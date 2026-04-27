@@ -44,11 +44,11 @@ export default function EstoqueAdmin() {
   const totalInsumos = insumos?.length || 0;
   
   // Agrupar saldos por Tipo de Produto
-  const saldoPorCategoria = insumos?.reduce((acc, curr) => {
+  const saldoPorCategoria: Record<string, number> = insumos?.reduce((acc: Record<string, number>, curr: any) => {
     const cat = curr.categorias_insumo?.nome || 'Outros';
-    acc[cat] = (acc[cat] || 0) + curr.quantidade_restante;
+    acc[cat] = (acc[cat] || 0) + (Number(curr.quantidade_restante) || 0);
     return acc;
-  }, {} as Record<string, number>) || {};
+  }, {}) || {};
 
   const getIconForCategoria = (catName: string) => {
     if (catName.toLowerCase().includes('semente')) return <Leaf className="w-5 h-5 text-primary" />;
