@@ -182,10 +182,10 @@ export default function TelaProdutorApp() {
       const fileName = `${loteAtivoId.id}_${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError } = await supabase.storage.from('laudos').upload(filePath, fotoFile);
+      const { error: uploadError } = await supabase.storage.from('fotos_evolutivas').upload(filePath, fotoFile);
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage.from('laudos').getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage.from('fotos_evolutivas').getPublicUrl(filePath);
 
       await supabase.from('lote_diario_tarefas').insert({
         lote_plantio_id: loteAtivoId.id,
