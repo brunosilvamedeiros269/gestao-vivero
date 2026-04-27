@@ -1,11 +1,37 @@
+'use client';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Package, Filter, Plus, Truck, Leaf, Beaker } from 'lucide-react';
 import Link from 'next/link';
 
-export default async function EstoqueAdmin() {
-  // 1. Puxar Configurações (Moeda)
-  const { data: configData } = await supabase.from('configuracoes').select('*').limit(1);
-  const moeda = configData && configData.length > 0 ? configData[0].moeda_padrao : 'COP';
+export default function EstoqueAdmin() {
+  const [loading, setLoading] = useState(true);
+  const [insumos, setInsumos] = useState<any[]>([]);
+  const [moeda, setMoeda] = useState('COP');
+
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  async function carregarDados() {
+    setLoading(true);
+    // 1. Puxar Configurações (Moeda)
+    const { data: configData } = await supabase.from('configuracoes').select('*').limit(1);
+    if (configData && configData.length > 0) setMoeda(configData[0].moeda_padrao);
+
+    // 2. Buscar Compras de Insumos (Estoque)
+    const { data } = await supabase
+      .from('compras_insumos')
+      .select(`
+        *,
+        fornecedores(nome_fantasia),
+        categorias_insumo(nome)
+      `)
+      .order('data_compra', { ascending: false });
+    
+    if (data) setInsumos(data);
+    setLoading(false);
+  }
 
   // Formatar Moeda
   const formatadorMoeda = new Intl.NumberFormat(moeda === 'BRL' ? 'pt-BR' : moeda === 'USD' ? 'en-US' : 'es-CO', {
@@ -13,16 +39,6 @@ export default async function EstoqueAdmin() {
     currency: moeda,
     minimumFractionDigits: 0
   });
-
-  // 2. Buscar Compras de Insumos (Estoque)
-  const { data: insumos } = await supabase
-    .from('compras_insumos')
-    .select(`
-      *,
-      fornecedores(nome_fantasia),
-      categorias_insumo(nome)
-    `)
-    .order('data_compra', { ascending: false });
 
   // Agrupadores (Para Dashboard)
   const totalInsumos = insumos?.length || 0;
@@ -74,7 +90,7 @@ export default async function EstoqueAdmin() {
                 <span className="text-secondary text-sm font-semibold tracking-wider truncate mr-2">{categoria}</span>
                 {getIconForCategoria(categoria)}
               </div>
-              <div className="text-3xl font-bold text-on-surface mt-4">{saldo}</div>
+              <div className="text-3xl font-bold text-on-surface mt-4">{(saldo as number).toLocaleString()}</div>
             </div>
           ))}
         </section>
