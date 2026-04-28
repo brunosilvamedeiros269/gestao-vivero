@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Leaf, Droplets, Sprout, ShieldAlert, Camera, Sparkles, ArrowRight, Camera as CameraIcon, Plus, LayoutGrid, PackageOpen, Skull, ThermometerSun, QrCode, ArrowLeft, Users, Flower2, AlertTriangle, X } from 'lucide-react';
+import { Leaf, Droplets, Sprout, ShieldAlert, Camera, Sparkles, ArrowRight, Camera as CameraIcon, Plus, LayoutGrid, PackageOpen, Skull, ThermometerSun, QrCode, ArrowLeft, Users, Flower2, AlertTriangle, X, Bot } from 'lucide-react';
 import { RegistrarUsoInsumo } from '@/components/RegistrarUsoInsumo';
 import ScannerQR from '@/components/ScannerQR';
 import NotificationBell from '@/components/NotificationBell';
+import { criarPlantasDoLote, registrarEventoEmMassa } from '@/app/actions/plantas';
 
 export default function TelaProdutorApp() {
   const [lotes, setLotes] = useState<any[]>([]);
@@ -19,6 +20,15 @@ export default function TelaProdutorApp() {
   
   // sheetView: 'menu' | 'foto' | 'baixa_parcial' | 'adicionar_mudas' | 'novo_lote'
   const [sheetView, setSheetView] = useState<string>('menu');
+
+  // Plantas Individuais
+  const [plantasDoLote, setPlantasDoLote] = useState<any[]>([]);
+  const [plantaAtiva, setPlantaAtiva] = useState<any>(null);
+
+  const carregarPlantasDoLote = async (loteId: string) => {
+    const { data } = await supabase.from('plantas').select('*').eq('lote_plantio_id', loteId).order('identificador_individual');
+    if (data) setPlantasDoLote(data);
+  };
 
   // Form: Foto
   const [fotoFile, setFotoFile] = useState<File | null>(null);
@@ -163,7 +173,11 @@ export default function TelaProdutorApp() {
         quantidade_plantada: (loteAtivoId.quantidade_plantada || 0) + qtdNum
       }).eq('id', loteAtivoId.id);
 
-      alert(logMsgs);
+      // GERAÇÃO DAS N PLANTAS INDIVIDUAIS
+      const baseIdf = loteAtivoId.identificacao_lote;
+      await criarPlantasDoLote(loteAtivoId.id, qtdNum, baseIdf);
+
+      alert(logMsgs + `\n${qtdNum} registros individuais de plantas gerados com sucesso!`);
       setSheetView('menu');
       setLoteAtivoId(null);
       setAddMudasQtd('');
@@ -190,8 +204,11 @@ export default function TelaProdutorApp() {
 
       const { data: { publicUrl } } = supabase.storage.from('fotos_evolutivas').getPublicUrl(filePath);
 
+      const isIndividual = sheetView === 'foto_planta' && plantaAtiva;
+
       const { data: diarioInserted, error: diarioError } = await supabase.from('lote_diario_tarefas').insert({
         lote_plantio_id: loteAtivoId.id,
+        planta_id: isIndividual ? plantaAtiva.id : null,
         tipo_tarefa: 'Laudo',
         observacao: fotoObs,
         foto_url: publicUrl
@@ -205,7 +222,7 @@ export default function TelaProdutorApp() {
       }
 
       alert('Laudo salvo com sucesso!');
-      setSheetView('menu');
+      setSheetView(isIndividual ? 'planta_detalhe' : 'menu');
       setFotoFile(null);
       setFotoObs('');
       carregarTudo();
@@ -266,6 +283,14 @@ export default function TelaProdutorApp() {
         tipo_tarefa: tarefaAtual,
         minutos_trabalhados: min
       }); 
+
+      // Replicar o evento individualmente para todas as plantas do lote
+      if (['Rega', 'Poda', 'Abono', 'Defensivo'].includes(tarefaAtual)) {
+        await registrarEventoEmMassa(
+          loteAtivoId.id, 
+          tarefaAtual === 'Defensivo' ? 'Veneno' : (tarefaAtual as any)
+        );
+      }
 
       // Incrementa custo acumulado da planta
       if (custoDessaTarefa > 0) {
@@ -560,17 +585,27 @@ export default function TelaProdutorApp() {
             {/* ==== VIEW: MENU PRINCIPAL DE LOTE EXISTENTE ==== */}
             {sheetView === 'menu' && typeof loteAtivoId === 'object' && (
               <>
-                <div className="mb-6 pr-10">
+                <div className="mb-4 pr-10">
                   <h2 className="text-2xl font-black text-on-surface leading-tight">{loteAtivoId.especie?.nome}</h2>
                   <p className="text-sm text-secondary font-medium mt-1 uppercase tracking-widest">{loteAtivoId.quantidade_plantada} Mudas Vivas ({loteAtivoId.identificacao_lote})</p>
+                </div>
+
+                {/* Sub-Aba Lote / Plantas */}
+                <div className="flex bg-surface-container-high rounded-lg p-1 mb-6">
+                  <button onClick={() => setSheetView('menu')} className="flex-1 py-2 text-xs font-bold rounded-lg transition bg-primary text-on-primary shadow">
+                    Visão Geral
+                  </button>
+                  <button onClick={() => { setSheetView('plantas_lista'); carregarPlantasDoLote(loteAtivoId.id); }} className="flex-1 py-2 text-xs font-bold rounded-lg transition text-secondary hover:bg-surface-container-highest">
+                    Plantas Individuais
+                  </button>
                 </div>
 
                 <div className="space-y-6">
                   {/* Bloco Diário Rápido */}
                   <div>
                     <div className="grid grid-cols-4 gap-2">
-                      <button onClick={()=>prepararTarefaDiaria('Rega')} className="flex flex-col items-center bg-blue-500/10 border border-blue-500/20 p-3 rounded-2xl active:bg-blue-500/20 transition"><Droplets size={24} className="text-blue-500 mb-1" /> <span className="text-[10px] font-bold text-blue-500">Rega</span></button>
-                      <button onClick={()=>prepararTarefaDiaria('Poda')} className="flex flex-col items-center bg-green-500/10 border border-green-500/20 p-3 rounded-2xl active:bg-green-500/20 transition"><Leaf size={24} className="text-green-500 mb-1" /> <span className="text-[10px] font-bold text-green-500">Poda</span></button>
+                      <button onClick={()=>prepararTarefaDiaria('Rega')} className="flex flex-col items-center bg-blue-500/10 border border-blue-500/20 p-3 rounded-2xl active:bg-blue-500/20 transition"><Droplets size={24} className="text-blue-500 mb-1" /> <span className="text-[10px] font-bold text-blue-500">Rega (Lote)</span></button>
+                      <button onClick={()=>prepararTarefaDiaria('Poda')} className="flex flex-col items-center bg-green-500/10 border border-green-500/20 p-3 rounded-2xl active:bg-green-500/20 transition"><Leaf size={24} className="text-green-500 mb-1" /> <span className="text-[10px] font-bold text-green-500">Poda (Lote)</span></button>
                       <button onClick={()=>prepararTarefaDiaria('Abono')} className="flex flex-col items-center bg-amber-600/10 border border-amber-600/20 p-3 rounded-2xl active:bg-amber-600/20 transition"><Sprout size={24} className="text-amber-600 mb-1" /> <span className="text-[10px] font-bold text-amber-600">Abono</span></button>
                       <button onClick={()=>prepararTarefaDiaria('Defensivo')} className="flex flex-col items-center bg-error/10 border border-error/20 p-3 rounded-2xl active:bg-error/20 transition"><ShieldAlert size={24} className="text-error mb-1" /> <span className="text-[10px] font-bold text-error">Veneno</span></button>
                     </div>
@@ -589,7 +624,7 @@ export default function TelaProdutorApp() {
                     
                     <RegistrarUsoInsumo loteId={loteAtivoId.id} />
 
-                    <button onClick={() => setSheetView('foto')} className="w-full flex items-center gap-4 bg-surface-container-high p-4 rounded-2xl text-left transition"><div className="p-3 bg-surface text-on-surface rounded-xl shadow-sm"><Camera size={20}/></div><div><p className="font-bold text-on-surface">Capturar Laudo</p></div></button>
+                    <button onClick={() => setSheetView('foto')} className="w-full flex items-center gap-4 bg-surface-container-high p-4 rounded-2xl text-left transition"><div className="p-3 bg-surface text-on-surface rounded-xl shadow-sm"><Camera size={20}/></div><div><p className="font-bold text-on-surface">Capturar Laudo (Geral)</p></div></button>
 
                     {(abaAtiva === 'bercario') && (
                       <button onClick={handleDeclararPronto} className="w-full flex items-center gap-4 bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl text-left"><div className="p-3 bg-amber-500 text-black rounded-xl shadow-sm"><Sparkles size={20}/></div><div><p className="font-bold text-amber-500">Floresceu (Declarar Pronto)</p></div></button>
@@ -603,6 +638,112 @@ export default function TelaProdutorApp() {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* ==== VIEW: LISTA DE PLANTAS INDIVIDUAIS ==== */}
+            {sheetView === 'plantas_lista' && typeof loteAtivoId === 'object' && (
+              <div className="space-y-4 animate-slide-up">
+                <div className="mb-4 pr-10">
+                  <h2 className="text-2xl font-black text-on-surface leading-tight">{loteAtivoId.especie?.nome}</h2>
+                  <p className="text-sm text-secondary font-medium mt-1 uppercase tracking-widest">{loteAtivoId.quantidade_plantada} Mudas Vivas ({loteAtivoId.identificacao_lote})</p>
+                </div>
+
+                {/* Sub-Aba Lote / Plantas */}
+                <div className="flex bg-surface-container-high rounded-lg p-1 mb-4">
+                  <button onClick={() => setSheetView('menu')} className="flex-1 py-2 text-xs font-bold rounded-lg transition text-secondary hover:bg-surface-container-highest">
+                    Visão Geral
+                  </button>
+                  <button onClick={() => setSheetView('plantas_lista')} className="flex-1 py-2 text-xs font-bold rounded-lg transition bg-primary text-on-primary shadow">
+                    Plantas Individuais
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                  {plantasDoLote.length === 0 && (
+                    <p className="text-xs text-secondary text-center py-4">Nenhuma planta individual registrada ainda. Tente "Plantar Mudas/Vasos".</p>
+                  )}
+                  {plantasDoLote.map((planta: any) => (
+                    <div key={planta.id} onClick={() => { setPlantaAtiva(planta); setSheetView('planta_detalhe'); }} className="flex justify-between items-center p-4 bg-surface-container-lowest border border-surface-container rounded-xl cursor-pointer hover:border-primary/50 transition">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
+                           <Leaf size={18} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-on-surface text-sm">{planta.identificador_individual}</p>
+                          <p className={`text-[10px] font-bold uppercase tracking-widest mt-0.5 ${planta.status === 'Semente' ? 'text-secondary' : planta.status === 'Germinada' ? 'text-primary' : 'text-amber-500'}`}>{planta.status} • {planta.saude}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <QrCode size={20} className="text-secondary" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ==== VIEW: DETALHES DE UMA PLANTA INDIVIDUAL ==== */}
+            {sheetView === 'planta_detalhe' && plantaAtiva && (
+              <div className="space-y-4 animate-slide-up">
+                <button type="button" onClick={() => setSheetView('plantas_lista')} className="text-sm font-bold text-primary mb-2 flex items-center gap-1"><ArrowRight size={14} className="rotate-180"/> Voltar à Lista</button>
+                
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black text-on-surface leading-tight">{plantaAtiva.identificador_individual}</h2>
+                    <span className={`inline-block mt-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border 
+                      ${plantaAtiva.status === 'Semente' ? 'bg-surface-container-high text-secondary border-surface-container-highest' : 
+                        plantaAtiva.status === 'Germinada' ? 'bg-primary/10 text-primary border-primary/20' : 
+                        plantaAtiva.status === 'Morta' ? 'bg-error/10 text-error border-error/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'}`}>
+                      {plantaAtiva.status}
+                    </span>
+                  </div>
+                  <div className="bg-surface-container-lowest border border-surface-container p-2 rounded-xl text-center">
+                    <QrCode size={32} className="mx-auto text-on-surface"/>
+                    <span className="text-[8px] font-bold text-secondary uppercase mt-1">Imprimir QR</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Timeline/Diário Individual (apenas visual por enquanto) */}
+                  <div className="bg-surface-container-low p-4 rounded-2xl border border-surface-container">
+                    <h3 className="font-bold text-sm text-on-surface mb-3 flex items-center gap-2"><CameraIcon size={16}/> Diário de Crescimento</h3>
+                    <button onClick={() => setSheetView('foto_planta')} className="w-full py-3 bg-primary/10 text-primary rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-primary/20 transition">
+                      <Camera size={16}/> Tirar Foto Individual (IA)
+                    </button>
+                    {/* Aqui renderizaria as fotos específicas com planta_id = plantaAtiva.id */}
+                    <div className="mt-4 flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                      {/* Placeholders for visual timeline */}
+                      <div className="w-20 h-20 bg-surface-container-highest rounded-lg flex-shrink-0 flex items-center justify-center text-secondary text-[10px] italic">Sem fotos</div>
+                    </div>
+                  </div>
+
+                  {/* Ações Individuais */}
+                  {plantaAtiva.status === 'Semente' && (
+                    <button onClick={async () => {
+                      await supabase.from('plantas').update({ status: 'Germinada', data_germinacao: new Date().toISOString() }).eq('id', plantaAtiva.id);
+                      setPlantaAtiva({...plantaAtiva, status: 'Germinada'});
+                      carregarPlantasDoLote(loteAtivoId.id);
+                      alert('Planta marcada como germinada!');
+                    }} className="w-full p-4 rounded-2xl bg-primary text-on-primary font-bold flex items-center justify-between shadow-md">
+                      <span className="flex items-center gap-2"><Sprout size={18}/> Reportar Germinação</span>
+                    </button>
+                  )}
+
+                  <button onClick={async () => {
+                     if(!confirm('Declarar perda desta planta individual?')) return;
+                     await supabase.from('plantas').update({ status: 'Morta' }).eq('id', plantaAtiva.id);
+                     await supabase.from('lotes_plantio').update({ 
+                        quantidade_plantada: Math.max(0, (loteAtivoId.quantidade_plantada || 1) - 1),
+                        quantidade_morta: (loteAtivoId.quantidade_morta || 0) + 1
+                     }).eq('id', loteAtivoId.id);
+                     setPlantaAtiva({...plantaAtiva, status: 'Morta'});
+                     carregarPlantasDoLote(loteAtivoId.id);
+                     alert('Planta reportada como morta/quebrada.');
+                  }} className="w-full p-4 rounded-2xl bg-error/10 text-error font-bold flex items-center gap-2 border border-error/20">
+                    <Skull size={18}/> Quebra / Mortalidade
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* ==== VIEW: ADICIONAR MUDAS (AUTO-RECEITA) ==== */}
@@ -674,7 +815,7 @@ export default function TelaProdutorApp() {
               </form>
             )}
 
-            {/* VIEW FOTO / LAUDO */}
+            {/* VIEW FOTO / LAUDO GERAL (LOTE) */}
             {sheetView === 'foto' && (
               <form onSubmit={handleFotoUpload} className="space-y-4 animate-slide-up">
                 <button type="button" onClick={() => setSheetView('menu')} className="text-sm font-bold text-primary mb-2 flex items-center gap-1"><ArrowRight size={14} className="rotate-180"/> Voltar</button>
@@ -685,7 +826,6 @@ export default function TelaProdutorApp() {
                   <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setFotoFile(e.target.files?.[0] || null)} />
                 </div>
 
-                {/* BOTÃO DE IA MOVIDO PARA O TOPO DO FORMULÁRIO PARA GARANTIR VISIBILIDADE */}
                 <div className="mb-4 flex items-center gap-3 p-4 bg-gradient-to-r from-purple-100 to-indigo-100 border-2 border-purple-400 rounded-3xl shadow-md animate-pulse">
                    <input 
                      type="checkbox" 
@@ -709,7 +849,50 @@ export default function TelaProdutorApp() {
                  </div>
                  
                  <button type="submit" disabled={!fotoFile || uploading} className="w-full bg-primary text-on-primary py-4 rounded-xl font-bold disabled:opacity-50 shadow-md text-lg">
-                   {uploading ? 'Processando...' : 'Salvar no Prontuário'}
+                   {uploading ? 'Processando...' : 'Salvar no Prontuário do Lote'}
+                 </button>
+              </form>
+            )}
+
+            {/* VIEW FOTO / LAUDO INDIVIDUAL (PLANTA) */}
+            {sheetView === 'foto_planta' && plantaAtiva && (
+              <form onSubmit={handleFotoUpload} className="space-y-4 animate-slide-up">
+                <button type="button" onClick={() => setSheetView('planta_detalhe')} className="text-sm font-bold text-primary mb-2 flex items-center gap-1"><ArrowRight size={14} className="rotate-180"/> Voltar para Planta</button>
+                <div className="mb-2">
+                  <h3 className="text-lg font-black text-on-surface">Capturar Laudo Individual</h3>
+                  <p className="text-xs text-secondary mt-1">Planta {plantaAtiva.identificador_individual}</p>
+                </div>
+                
+                <div onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-2 border-dashed border-primary/50 bg-primary/5 rounded-2xl flex flex-col items-center justify-center text-primary cursor-pointer">
+                  <Camera size={32} className="mb-2 opacity-50"/>
+                  <span className="font-bold">{fotoFile ? fotoFile.name : 'Toque para Abrir Câmera'}</span>
+                  <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setFotoFile(e.target.files?.[0] || null)} />
+                </div>
+
+                <div className="mb-4 flex items-center gap-3 p-4 bg-gradient-to-r from-purple-100 to-indigo-100 border-2 border-purple-400 rounded-3xl shadow-md animate-pulse">
+                   <input 
+                     type="checkbox" 
+                     id="pedirIAPlanta" 
+                     checked={pedirIAImediato} 
+                     onChange={e => setPedirIAImediato(e.target.checked)}
+                     className="w-8 h-8 accent-purple-600 rounded-lg cursor-pointer"
+                   />
+                   <label htmlFor="pedirIAPlanta" className="flex-1 cursor-pointer select-none">
+                     <div className="flex items-center gap-2">
+                       <Sparkles size={22} className="text-purple-600"/>
+                       <span className="text-[14px] font-black text-purple-900 uppercase tracking-tighter">ANÁLISE INDIVIDUAL IA</span>
+                     </div>
+                     <span className="block text-[11px] text-purple-800 font-bold leading-tight">Diagnóstico específico para esta planta.</span>
+                   </label>
+                 </div>
+
+                 <div>
+                    <label className="text-sm font-bold text-secondary mb-1 block">Observação Individual (opcional)</label>
+                    <textarea rows={3} value={fotoObs} onChange={e=>setFotoObs(e.target.value)} placeholder="Estado das folhas..." className="w-full bg-surface-container-lowest border border-surface-container text-on-surface rounded-xl p-4 outline-none resize-none"></textarea>
+                 </div>
+                 
+                 <button type="submit" disabled={!fotoFile || uploading} className="w-full bg-primary text-on-primary py-4 rounded-xl font-bold disabled:opacity-50 shadow-md text-lg">
+                   {uploading ? 'Processando...' : 'Salvar no Histórico da Planta'}
                  </button>
               </form>
             )}
@@ -757,7 +940,7 @@ export default function TelaProdutorApp() {
                         </div>
                         <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-surface-container bg-surface-container-lowest shadow-sm">
                           <div className="flex items-center justify-between space-x-2 mb-1">
-                            <div className="font-bold text-on-surface text-sm uppercase tracking-wider">{d.tipo_tarefa.replace('_', ' ')}</div>
+                            <div className="font-bold text-on-surface text-sm uppercase tracking-wider">{d.tipo_tarefa ? d.tipo_tarefa.replace('_', ' ') : 'Tarefa'}</div>
                             <div className="text-xs font-medium text-secondary">{new Date(d.data_execucao).toLocaleDateString('pt-BR')} {new Date(d.data_execucao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</div>
                           </div>
                           {d.foto_url && (
@@ -782,10 +965,10 @@ export default function TelaProdutorApp() {
                              <div className="mt-3 bg-purple-500/10 border border-purple-500/20 p-3 rounded-xl">
                                <div className="flex items-center gap-2 mb-2 text-purple-600 font-bold text-xs"><Bot size={14}/> Agrônomo Virtual IA</div>
                                <div className="space-y-1 text-xs">
-                                 <p><span className="font-bold">Desenvolvimento:</span> {d.analise_ia.desvio_desenvolvimento}</p>
-                                 <p><span className="font-bold">Saúde:</span> <span className={d.analise_ia.estado_saude.includes('Saudável') ? 'text-green-600 font-bold' : 'text-error font-bold'}>{d.analise_ia.estado_saude}</span></p>
-                                 {d.analise_ia.doenca_detectada && d.analise_ia.doenca_detectada !== 'Nenhuma' && <p><span className="font-bold">Doença:</span> <span className="text-error">{d.analise_ia.doenca_detectada}</span></p>}
-                                 <p className="mt-2 text-purple-700 font-medium bg-purple-500/10 p-2 rounded-lg">💡 Ação sugerida: {d.analise_ia.acao_sugerida}</p>
+                                 {d.analise_ia?.desvio_desenvolvimento && <p><span className="font-bold">Desenvolvimento:</span> {d.analise_ia.desvio_desenvolvimento}</p>}
+                                 {d.analise_ia?.estado_saude && <p><span className="font-bold">Saúde:</span> <span className={d.analise_ia.estado_saude.includes('Saudável') ? 'text-green-600 font-bold' : 'text-error font-bold'}>{d.analise_ia.estado_saude}</span></p>}
+                                 {d.analise_ia?.doenca_detectada && d.analise_ia.doenca_detectada !== 'Nenhuma' && <p><span className="font-bold">Doença:</span> <span className="text-error">{d.analise_ia.doenca_detectada}</span></p>}
+                                 {d.analise_ia?.acao_sugerida && <p className="mt-2 text-purple-700 font-medium bg-purple-500/10 p-2 rounded-lg">💡 Ação sugerida: {d.analise_ia.acao_sugerida}</p>}
                                </div>
                              </div>
                           )}
