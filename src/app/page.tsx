@@ -26,9 +26,20 @@ export default function TelaProdutorApp() {
   const [plantasDoLote, setPlantasDoLote] = useState<any[]>([]);
   const [plantaAtiva, setPlantaAtiva] = useState<any>(null);
 
+  const [historicoDaPlanta, setHistoricoDaPlanta] = useState<any[]>([]);
+
   const carregarPlantasDoLote = async (loteId: string) => {
     const { data } = await supabase.from('plantas').select('*').eq('lote_plantio_id', loteId).order('identificador_individual');
     if (data) setPlantasDoLote(data);
+  };
+
+  const carregarHistoricoDaPlanta = async (plantaId: string) => {
+    const { data } = await supabase
+      .from('lote_diario_tarefas')
+      .select('*')
+      .eq('planta_id', plantaId)
+      .order('data_execucao', { ascending: false });
+    if (data) setHistoricoDaPlanta(data);
   };
 
   // Form: Foto
@@ -229,6 +240,7 @@ export default function TelaProdutorApp() {
       }
 
       alert('Laudo salvo com sucesso!');
+      if (isIndividual) carregarHistoricoDaPlanta(plantaAtiva.id);
       setSheetView(isIndividual ? 'planta_detalhe' : 'menu');
       setFotoFile(null);
       setFotoObs('');
@@ -685,7 +697,7 @@ export default function TelaProdutorApp() {
                     </div>
                   )}
                   {plantasDoLote.map((planta: any) => (
-                    <div key={planta.id} onClick={() => { setPlantaAtiva(planta); setSheetView('planta_detalhe'); }} className="flex justify-between items-center p-4 bg-surface-container-lowest border border-surface-container rounded-xl cursor-pointer hover:border-primary/50 transition">
+                    <div key={planta.id} onClick={() => { setPlantaAtiva(planta); setSheetView('planta_detalhe'); carregarHistoricoDaPlanta(planta.id); }} className="flex justify-between items-center p-4 bg-surface-container-lowest border border-surface-container rounded-xl cursor-pointer hover:border-primary/50 transition">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
                            <Leaf size={18} />
@@ -729,13 +741,39 @@ export default function TelaProdutorApp() {
                   {/* Timeline/Diário Individual (apenas visual por enquanto) */}
                   <div className="bg-surface-container-low p-4 rounded-2xl border border-surface-container">
                     <h3 className="font-bold text-sm text-on-surface mb-3 flex items-center gap-2"><CameraIcon size={16}/> Diário de Crescimento</h3>
-                    <button onClick={() => setSheetView('foto_planta')} className="w-full py-3 bg-primary/10 text-primary rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-primary/20 transition">
+                    <button onClick={() => setSheetView('foto_planta')} className="w-full py-3 bg-primary/10 text-primary rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-primary/20 transition mb-4">
                       <Camera size={16}/> Tirar Foto Individual (IA)
                     </button>
-                    {/* Aqui renderizaria as fotos específicas com planta_id = plantaAtiva.id */}
-                    <div className="mt-4 flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                      {/* Placeholders for visual timeline */}
-                      <div className="w-20 h-20 bg-surface-container-highest rounded-lg flex-shrink-0 flex items-center justify-center text-secondary text-[10px] italic">Sem fotos</div>
+                    
+                    <div className="space-y-3">
+                      {historicoDaPlanta.length === 0 ? (
+                        <p className="text-[10px] text-secondary italic text-center py-4">Nenhum laudo ou foto para esta planta.</p>
+                      ) : (
+                        historicoDaPlanta.map((item: any) => (
+                          <div key={item.id} className="bg-surface-container-lowest border border-surface-container p-3 rounded-xl">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="text-[10px] font-bold text-primary uppercase">{new Date(item.data_execucao).toLocaleDateString('pt-BR')}</span>
+                              {item.analise_ia && <Sparkles size={12} className="text-purple-500" />}
+                            </div>
+                            
+                            {item.foto_url && (
+                              <img src={item.foto_url} alt="Evolução" className="w-full h-24 object-cover rounded-lg mb-2 border border-surface-container" />
+                            )}
+                            
+                            {item.observacao && <p className="text-[11px] text-on-surface mb-2">{item.observacao}</p>}
+                            
+                            {item.analise_ia && (
+                              <div className="bg-purple-500/5 border border-purple-500/10 p-2 rounded-lg">
+                                <p className="text-[9px] font-black text-purple-600 uppercase flex items-center gap-1 mb-1"><Bot size={10}/> Laudo IA</p>
+                                <p className="text-[10px] text-purple-700 leading-tight">
+                                  <strong>Saúde:</strong> {item.analise_ia.estado_saude}<br/>
+                                  <strong>Ação:</strong> {item.analise_ia.acao_sugerida}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 

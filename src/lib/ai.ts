@@ -76,7 +76,7 @@ export async function chamarIA({ provider, keys, prompt, imageBase64, mimeType, 
         'Authorization': `Bearer ${keys.groq_api_key}`
       },
       body: JSON.stringify({
-        model: imageBase64 ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile",
+        model: imageBase64 ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile",
         messages,
         response_format: { type: "json_object" }
       })
