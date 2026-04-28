@@ -6,6 +6,7 @@ import { RegistrarUsoInsumo } from '@/components/RegistrarUsoInsumo';
 import ScannerQR from '@/components/ScannerQR';
 import NotificationBell from '@/components/NotificationBell';
 import { criarPlantasDoLote, registrarEventoEmMassa } from '@/app/actions/plantas';
+import QRCode from 'react-qr-code';
 
 export default function TelaProdutorApp() {
   const [lotes, setLotes] = useState<any[]>([]);
@@ -106,6 +107,7 @@ export default function TelaProdutorApp() {
       setAbaAtiva(loteEncontrado.status === 'ponto_de_venda' ? 'prontas' : 'bercario');
       setLoteAtivoId(loteEncontrado);
       setSheetView('menu');
+      carregarPlantasDoLote(loteEncontrado.id);
     } else {
       alert('Lote não encontrado ou já vendido/morto.');
     }
@@ -404,7 +406,7 @@ export default function TelaProdutorApp() {
           const conformidadeRega = Math.min(100, Math.round((regasRealizadas / regasEsperadas) * 100));
 
           return (
-            <div key={l.id} onClick={() => { setLoteAtivoId(l); setSheetView('menu'); }} className="bg-surface-container-lowest p-5 rounded-3xl border border-surface-container shadow-sm active:scale-95 transition cursor-pointer group hover:border-primary/30">
+            <div key={l.id} onClick={() => { setLoteAtivoId(l); setSheetView('menu'); carregarPlantasDoLote(l.id); }} className="bg-surface-container-lowest p-5 rounded-3xl border border-surface-container shadow-sm active:scale-95 transition cursor-pointer group hover:border-primary/30">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
                   <h3 className="text-xl font-black text-on-surface leading-tight group-hover:text-primary transition-colors">{l.especie?.nome || 'Desconhecido'}</h3>
@@ -494,7 +496,7 @@ export default function TelaProdutorApp() {
         })}
 
         {(!loading && abaAtiva === 'prontas') && lotesProntos.map(l => (
-          <div key={l.id} onClick={() => { setLoteAtivoId(l); setSheetView('menu'); }} className="bg-surface-container-lowest p-5 rounded-3xl border-2 border-amber-500/20 shadow-sm active:scale-95 transition cursor-pointer relative overflow-hidden">
+          <div key={l.id} onClick={() => { setLoteAtivoId(l); setSheetView('menu'); carregarPlantasDoLote(l.id); }} className="bg-surface-container-lowest p-5 rounded-3xl border-2 border-amber-500/20 shadow-sm active:scale-95 transition cursor-pointer relative overflow-hidden">
             <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-bl-full flex items-start justify-end p-2"><Flower2 size={20} className="text-amber-500" /></div>
             <div>
                <h3 className="text-xl font-extrabold text-on-surface leading-tight">{l.especie?.nome || 'Desconhecido'}</h3>
@@ -697,7 +699,7 @@ export default function TelaProdutorApp() {
                       {plantaAtiva.status}
                     </span>
                   </div>
-                  <div className="bg-surface-container-lowest border border-surface-container p-2 rounded-xl text-center">
+                  <div onClick={() => setSheetView('imprimir_qr')} className="bg-surface-container-lowest border border-surface-container p-2 rounded-xl text-center cursor-pointer hover:border-primary/50 transition">
                     <QrCode size={32} className="mx-auto text-on-surface"/>
                     <span className="text-[8px] font-bold text-secondary uppercase mt-1">Imprimir QR</span>
                   </div>
@@ -743,6 +745,60 @@ export default function TelaProdutorApp() {
                     <Skull size={18}/> Quebra / Mortalidade
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* ==== VIEW: IMPRESSAO QR ==== */}
+            {sheetView === 'imprimir_qr' && plantaAtiva && (
+              <div className="space-y-6 animate-slide-up flex flex-col items-center justify-center py-6">
+                <button type="button" onClick={() => setSheetView('planta_detalhe')} className="text-sm font-bold text-primary mb-2 flex items-center gap-1 self-start print:hidden"><ArrowRight size={14} className="rotate-180"/> Voltar para Planta</button>
+                
+                <div id="qr-container" className="bg-white p-8 rounded-3xl border border-surface-container flex flex-col items-center shadow-xl print:shadow-none print:border-none print:p-0">
+                  <h2 className="text-3xl font-black text-black mb-1 text-center">{plantaAtiva.identificador_individual}</h2>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-6">Gestão Viveiro - Lote {loteAtivoId?.identificacao_lote}</p>
+                  
+                  <div className="bg-white p-2 border-4 border-black rounded-xl">
+                    <QRCode value={plantaAtiva.id} size={200} />
+                  </div>
+                  
+                  <p className="text-[8px] text-gray-400 mt-4 font-mono">{plantaAtiva.id}</p>
+                </div>
+
+                <button onClick={() => {
+                  const svgEl = document.getElementById('qr-container')?.innerHTML;
+                  if (svgEl) {
+                    const printWindow = window.open('', '_blank');
+                    if (printWindow) {
+                      printWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>Print QR</title>
+                            <style>
+                              body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
+                            </style>
+                          </head>
+                          <body>
+                            <div style="text-align: center;">
+                              ${svgEl}
+                            </div>
+                            <script>
+                              setTimeout(() => {
+                                window.print();
+                                window.close();
+                              }, 250);
+                            </script>
+                          </body>
+                        </html>
+                      `);
+                      printWindow.document.close();
+                    }
+                  } else {
+                    window.print();
+                  }
+                }} className="w-full bg-primary text-on-primary py-4 rounded-xl font-bold text-lg shadow-md hover:scale-[1.02] transition print:hidden flex items-center justify-center gap-2">
+                  <QrCode size={20}/> Imprimir Etiqueta
+                </button>
+                <p className="text-xs text-secondary text-center print:hidden">Dica: Configure sua impressora para não imprimir cabeçalhos/rodapés e ajustar a escala.</p>
               </div>
             )}
 
