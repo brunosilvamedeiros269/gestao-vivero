@@ -120,15 +120,20 @@ export default function TelaProdutorApp() {
     if (!novoLoteIdf || !novoLoteEspecie) return;
 
     try {
-      const { error } = await supabase.from('lotes_plantio').insert({
+      const { data: nLote, error } = await supabase.from('lotes_plantio').insert({
         identificacao_lote: novoLoteIdf,
         especie_id: novoLoteEspecie,
         quantidade_plantada: isIndividual ? 1 : 0,
         status: isIndividual ? 'em_crescimento' : 'germinando',
         data_plantio: new Date().toISOString().split('T')[0],
         tipo_gestao: isIndividual ? 'individual' : 'lote'
-      });
+      }).select().single();
+      
       if (error) throw error;
+
+      if (isIndividual && nLote) {
+         await criarPlantasDoLote(nLote.id, 1, nLote.identificacao_lote);
+      }
       alert("Placa do Lote criada com sucesso!");
       setSheetView('menu');
       setLoteAtivoId(null);
@@ -177,7 +182,7 @@ export default function TelaProdutorApp() {
 
       // GERAÇÃO DAS N PLANTAS INDIVIDUAIS
       const baseIdf = loteAtivoId.identificacao_lote;
-      await criarPlantasDoLote(loteAtivoId.id, qtdNum, baseIdf);
+      await criarPlantasDoLote(loteAtivoId.id, qtdNum, baseIdf, loteAtivoId.quantidade_plantada || 0);
 
       alert(logMsgs + `\n${qtdNum} registros individuais de plantas gerados com sucesso!`);
       setSheetView('menu');
@@ -662,7 +667,22 @@ export default function TelaProdutorApp() {
 
                 <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                   {plantasDoLote.length === 0 && (
-                    <p className="text-xs text-secondary text-center py-4">Nenhuma planta individual registrada ainda. Tente "Plantar Mudas/Vasos".</p>
+                    <div className="text-center py-8 bg-surface-container-low rounded-2xl border border-dashed border-surface-container px-6">
+                      <p className="text-sm font-bold text-on-surface mb-2">Registros não encontrados</p>
+                      <p className="text-xs text-secondary mb-6">Este lote possui {loteAtivoId.quantidade_plantada} mudas, mas elas ainda não foram catalogadas individualmente.</p>
+                      <button 
+                        onClick={async () => {
+                          setLoading(true);
+                          await criarPlantasDoLote(loteAtivoId.id, loteAtivoId.quantidade_plantada, loteAtivoId.identificacao_lote);
+                          await carregarPlantasDoLote(loteAtivoId.id);
+                          setLoading(false);
+                          alert(`${loteAtivoId.quantidade_plantada} registros individuais gerados com sucesso!`);
+                        }}
+                        className="bg-primary text-on-primary text-xs font-bold py-3 px-6 rounded-xl shadow-md hover:scale-105 transition"
+                      >
+                        Catalogar {loteAtivoId.quantidade_plantada} Plantas Agora
+                      </button>
+                    </div>
                   )}
                   {plantasDoLote.map((planta: any) => (
                     <div key={planta.id} onClick={() => { setPlantaAtiva(planta); setSheetView('planta_detalhe'); }} className="flex justify-between items-center p-4 bg-surface-container-lowest border border-surface-container rounded-xl cursor-pointer hover:border-primary/50 transition">

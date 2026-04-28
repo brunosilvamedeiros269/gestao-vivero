@@ -3,12 +3,12 @@
 import { supabase } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function criarPlantasDoLote(loteId: string, quantidade: number, identificacaoBase: string) {
+export async function criarPlantasDoLote(loteId: string, quantidade: number, identificacaoBase: string, offset: number = 0) {
   try {
     const novasPlantas = [];
     
     for (let i = 1; i <= quantidade; i++) {
-      const numFormatado = String(i).padStart(3, '0');
+      const numFormatado = String(i + offset).padStart(3, '0');
       novasPlantas.push({
         lote_plantio_id: loteId,
         identificador_individual: `${identificacaoBase}-${numFormatado}`,
