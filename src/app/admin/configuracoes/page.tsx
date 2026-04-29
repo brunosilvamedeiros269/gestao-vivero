@@ -23,6 +23,7 @@ export default function ConfiguracoesPage() {
     amazon_client_id: '',
     meta_catalog_id: '',
     meta_token: '',
+    ml_access_token: '',
     exito_api_key: '',
     falabella_api_key: '',
     tiktok_app_key: ''
@@ -222,6 +223,20 @@ export default function ConfiguracoesPage() {
               <div className="space-y-3">
                 <input type="text" name="mercadolivre_app_id" value={form.mercadolivre_app_id} onChange={handleChange} placeholder="APP ID" className="w-full bg-surface border border-surface-container-highest rounded-lg px-3 py-2 text-sm outline-none" />
                 <input type="password" name="mercadolivre_secret" value={form.mercadolivre_secret} onChange={handleChange} placeholder="Secret Key" className="w-full bg-surface border border-surface-container-highest rounded-lg px-3 py-2 text-sm outline-none" />
+                
+                {form.mercadolivre_app_id && form.mercadolivre_secret && (
+                  <div className="pt-2 border-t border-surface-container-highest">
+                    {form.ml_access_token ? (
+                      <div className="bg-green-100 text-green-800 text-xs font-bold px-3 py-2 rounded-lg text-center flex items-center justify-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span> Conectado via API
+                      </div>
+                    ) : (
+                      <a href="/api/integracoes/mercadolivre/auth" className="block w-full bg-blue-600 text-white text-xs font-bold px-3 py-2.5 rounded-lg text-center hover:bg-blue-700 transition shadow-sm">
+                        Autorizar Conta no ML
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

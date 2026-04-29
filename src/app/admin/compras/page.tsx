@@ -1,13 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Package, Filter, Plus, Truck, Leaf, Beaker } from 'lucide-react';
+import { Package, Filter, Plus, Truck, Leaf, Beaker, ArrowLeft, Calendar, DollarSign, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function EstoqueAdmin() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [insumos, setInsumos] = useState<any[]>([]);
-  const [moeda, setMoeda] = useState('COP');
+  const [moeda, setMoeda] = useState('BRL');
 
   useEffect(() => {
     carregarDados();
@@ -15,11 +17,9 @@ export default function EstoqueAdmin() {
 
   async function carregarDados() {
     setLoading(true);
-    // 1. Puxar Configurações (Moeda)
     const { data: configData } = await supabase.from('configuracoes').select('*').limit(1);
-    if (configData && configData.length > 0) setMoeda(configData[0].moeda_padrao);
+    if (configData && configData.length > 0) setMoeda(configData[0].moeda_padrao || 'BRL');
 
-    // 2. Buscar Compras de Insumos (Estoque)
     const { data } = await supabase
       .from('compras_insumos')
       .select(`
@@ -33,17 +33,14 @@ export default function EstoqueAdmin() {
     setLoading(false);
   }
 
-  // Formatar Moeda
-  const formatadorMoeda = new Intl.NumberFormat(moeda === 'BRL' ? 'pt-BR' : moeda === 'USD' ? 'en-US' : 'es-CO', {
+  const formatadorMoeda = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: moeda,
     minimumFractionDigits: 0
   });
 
-  // Agrupadores (Para Dashboard)
   const totalInsumos = insumos?.length || 0;
   
-  // Agrupar saldos por Tipo de Produto
   const saldoPorCategoria: Record<string, number> = insumos?.reduce((acc: Record<string, number>, curr: any) => {
     const cat = curr.categorias_insumo?.nome || 'Outros';
     acc[cat] = (acc[cat] || 0) + (Number(curr.quantidade_restante) || 0);
@@ -57,108 +54,99 @@ export default function EstoqueAdmin() {
   }
 
   return (
-    <div className="bg-surface min-h-screen text-on-surface">
-      {/* Navbar Minimalista de Escritório */}
-      <nav className="border-b border-surface-container-highest px-8 py-4 flex justify-between items-center bg-surface-container-lowest">
-        <div className="flex items-center gap-3">
-          <Truck className="text-primary w-6 h-6" />
-          <h1 className="text-xl font-bold">Gestão de Compras e Suprimentos</h1>
+    <div className="bg-background min-h-screen text-on-surface pb-20">
+      {/* Header App Style */}
+      <header className="sticky top-0 z-[100] bg-surface border-b border-surface-container px-6 py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.push('/')} className="p-2 hover:bg-surface-container rounded-full transition">
+            <ArrowLeft size={24} className="text-secondary" />
+          </button>
+          <div>
+            <h1 className="text-lg font-black text-on-surface leading-tight">Compras</h1>
+            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">Estoque e Suprimentos</p>
+          </div>
         </div>
-        <div className="flex gap-4">
-          <span className="text-sm font-medium bg-surface-container-low px-3 py-1 rounded text-on-surface-variant flex items-center">
-            Moeda Ativa: {moeda}
-          </span>
-          <Link href="/admin/compras/nova" className="bg-primary text-on-primary font-medium px-4 py-2 rounded shadow hover:bg-primary-container transition flex gap-2 items-center">
-            <Plus size={18} /> Nova Compra
-          </Link>
-        </div>
-      </nav>
+        <Link href="/admin/compras/nova" className="p-3 bg-primary text-on-primary rounded-2xl shadow-lg active:scale-95 transition">
+          <Plus size={20} />
+        </Link>
+      </header>
 
-      <main className="p-8 max-w-7xl mx-auto space-y-8">
+      <main className="px-6 py-6 space-y-6">
         
-        {/* Gráficos / Top Info */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-surface-container-low p-6 rounded-2xl border border-surface-container-highest flex flex-col justify-between">
-            <span className="text-secondary text-sm font-semibold uppercase tracking-wider">Lotes de Compras</span>
-            <div className="text-4xl font-bold text-primary mt-2">{totalInsumos}</div>
+        {/* Sumário Rápido (Horizontal Scroll em Mobile) */}
+        <section className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
+          <div className="min-w-[140px] bg-surface-container-low p-4 rounded-3xl border border-surface-container shadow-sm flex flex-col justify-between">
+            <span className="text-[9px] font-black text-secondary uppercase tracking-widest mb-2">Total Itens</span>
+            <div className="text-2xl font-black text-primary">{totalInsumos}</div>
           </div>
           
-          {/* Renderização Dinâmica do Estoque por Categoria */}
           {Object.entries(saldoPorCategoria).map(([categoria, saldo]) => (
-            <div key={categoria} className="bg-surface-container-lowest p-6 rounded-2xl border border-surface-container-highest flex flex-col justify-between shadow-sm">
-              <div className="flex justify-between items-start opacity-70">
-                <span className="text-secondary text-sm font-semibold tracking-wider truncate mr-2">{categoria}</span>
+            <div key={categoria} className="min-w-[140px] bg-surface-container-lowest p-4 rounded-3xl border border-surface-container shadow-sm flex flex-col justify-between">
+              <div className="flex justify-between items-start opacity-70 mb-2">
+                <span className="text-[9px] font-black text-secondary uppercase tracking-widest truncate mr-1">{categoria}</span>
                 {getIconForCategoria(categoria)}
               </div>
-              <div className="text-3xl font-bold text-on-surface mt-4">{(saldo as number).toLocaleString()}</div>
+              <div className="text-2xl font-black text-on-surface">{(saldo as number).toLocaleString()}</div>
             </div>
           ))}
         </section>
 
-        {/* Tabela de Estoque Atual */}
-        <section className="bg-surface-container-lowest rounded-2xl border border-surface-container-highest overflow-hidden">
-          <div className="px-6 py-4 border-b border-surface-container-highest flex justify-between items-center bg-surface-container-low/50">
-            <h2 className="font-bold text-lg">Insumos Disponíveis para Plantio</h2>
-            <button className="text-secondary hover:text-primary"><Filter size={20} /></button>
+        {/* Lista de Insumos - Mobile Cards */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-black text-secondary uppercase tracking-widest">Itens em Estoque</h2>
+            <button className="text-primary text-[10px] font-bold uppercase tracking-widest">Filtrar</button>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-surface-container-low text-secondary text-sm">
-                  <th className="px-6 py-3 font-semibold">Tipo</th>
-                  <th className="px-6 py-3 font-semibold">Item & Fornecedor</th>
-                  <th className="px-6 py-3 font-semibold">Data Compra</th>
-                  <th className="px-6 py-3 font-semibold">Custo Unid.</th>
-                  <th className="px-6 py-3 font-semibold text-right">Saldo em Estoque</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-container-highest">
-                {insumos && insumos.length > 0 ? (
-                  insumos.map((item) => (
-                    <tr key={item.id} className="hover:bg-surface-container-low transition">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="bg-surface-container-high p-2 rounded-lg">
-                            {getIconForCategoria(item.categorias_insumo?.nome || '')}
-                          </span>
-                          <span className="text-sm font-medium text-secondary">{item.categorias_insumo?.nome}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-on-surface">{item.nome_item}</div>
-                        {item.capacidade_substrato_vazao > 0 && (
-                          <div className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded inline-block mt-1">
-                            Cap. Substrato: {item.capacidade_substrato_vazao} L/Kg
-                          </div>
-                        )}
-                        <div className="text-xs text-on-surface-variant flex items-center gap-1 mt-1">
-                          Fornecedor: <span className="font-medium">{item.fornecedores?.nome_fantasia}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-on-surface-variant">
-                        {new Date(item.data_compra).toLocaleDateString('pt-BR', { timeZone: 'UTC'})}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-on-surface">
-                        {formatadorMoeda.format(item.custo_unitario)} <span className="text-secondary text-xs">/ {item.unidade_medida}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="font-bold text-lg text-primary">{item.quantidade_restante}</div>
-                        <div className="text-xs text-secondary">{item.unidade_medida}</div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-secondary">
-                      <Package className="w-12 h-12 mx-auto text-surface-container-highest mb-3" />
-                      O estoque de insumos está vazio. Adicione uma Nova Compra.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {loading ? (
+            <div className="py-20 text-center text-secondary animate-pulse">Carregando estoque...</div>
+          ) : insumos && insumos.length > 0 ? (
+            <div className="space-y-3">
+              {insumos.map((item) => (
+                <div key={item.id} className="bg-surface-container-lowest p-5 rounded-[2rem] border border-surface-container shadow-sm hover:border-primary/30 transition flex flex-col gap-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-surface-container p-3 rounded-2xl">
+                        {getIconForCategoria(item.categorias_insumo?.nome || '')}
+                      </div>
+                      <div>
+                        <h3 className="font-black text-on-surface leading-tight">{item.nome_item}</h3>
+                        <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">{item.categorias_insumo?.nome} • {item.fornecedores?.nome_fantasia}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-black text-primary">{item.quantidade_restante}</div>
+                      <div className="text-[9px] font-black text-secondary uppercase">{item.unidade_medida}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-4 border-t border-surface-container">
+                    <div className="flex items-center gap-2 text-secondary">
+                      <Calendar size={14} />
+                      <span className="text-[10px] font-bold">{new Date(item.data_compra).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-on-surface-variant justify-end">
+                      <DollarSign size={14} className="text-green-600" />
+                      <span className="text-[10px] font-black">{formatadorMoeda.format(item.custo_unitario)} <span className="text-secondary font-normal">/{item.unidade_medida}</span></span>
+                    </div>
+                  </div>
+
+                  {item.capacidade_substrato_vazao > 0 && (
+                    <div className="bg-primary/5 p-3 rounded-xl flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-tighter">Capacidade por Unidade</span>
+                      <span className="text-xs font-black text-primary">{item.capacidade_substrato_vazao} L/Kg</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-surface-container-low rounded-[2rem] p-12 text-center border-2 border-dashed border-surface-container">
+              <Package className="w-12 h-12 mx-auto text-surface-container-highest mb-4" />
+              <p className="text-sm font-bold text-secondary">Nenhum insumo em estoque.</p>
+              <Link href="/admin/compras/nova" className="text-primary text-xs font-black uppercase mt-4 inline-block underline underline-offset-4">Adicionar agora</Link>
+            </div>
+          )}
         </section>
 
       </main>

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   Leaf, Droplets, Sprout, ShieldAlert, Camera, Sparkles, ArrowRight, Camera as CameraIcon, Plus, LayoutGrid, PackageOpen, Skull, ThermometerSun, QrCode, ArrowLeft, Users, Flower2, AlertTriangle, X, Bot,
-  DollarSign, ShoppingBag, AlertCircle, TrendingUp, Settings, Briefcase
+  DollarSign, ShoppingBag, AlertCircle, TrendingUp, Settings, Briefcase, Truck
 } from 'lucide-react';
 import Link from 'next/link';
 import { RegistrarUsoInsumo } from '@/components/RegistrarUsoInsumo';
@@ -781,31 +781,31 @@ export default function TelaProdutorApp() {
                 <ArrowRight size={20} className="text-surface-container-highest" />
               </Link>
 
-              <div className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl opacity-50 grayscale cursor-not-allowed">
+              <Link href="/admin/fornecedores" className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl hover:border-primary transition group">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
+                  <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl group-hover:bg-blue-500 group-hover:text-white transition">
+                    <Truck size={24} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface">Gestão de Fornecedores</p>
+                    <p className="text-xs text-secondary">Parceiros, sementes e insumos.</p>
+                  </div>
+                </div>
+                <ArrowRight size={20} className="text-surface-container-highest" />
+              </Link>
+
+              <Link href="/admin/clientes" className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl hover:border-primary transition group">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl group-hover:bg-indigo-500 group-hover:text-white transition">
                     <Briefcase size={24} />
                   </div>
                   <div>
-                    <p className="font-bold text-on-surface">Folha de Pagamento</p>
-                    <p className="text-xs text-secondary">Cálculo de horas trabalhadas (Em breve).</p>
+                    <p className="font-bold text-on-surface">Clientes B2B</p>
+                    <p className="text-xs text-secondary">Carteira de atacado e paisagistas.</p>
                   </div>
                 </div>
-                <Settings size={20} className="text-surface-container-highest" />
-              </div>
-
-              <div className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl opacity-50 grayscale cursor-not-allowed">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl">
-                    <TrendingUp size={24} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-on-surface">Relatórios de Perda</p>
-                    <p className="text-xs text-secondary">Análise histórica de mortalidade.</p>
-                  </div>
-                </div>
-                <Settings size={20} className="text-surface-container-highest" />
-              </div>
+                <ArrowRight size={20} className="text-surface-container-highest" />
+              </Link>
 
               <Link href="/admin/especies" className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl hover:border-primary transition group">
                 <div className="flex items-center gap-4">

@@ -117,13 +117,42 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
     try {
       const ints = lote.integracoes || {};
       
-      // Simulando chamada de API Mockada
-      await fetch('/api/integracoes/mock', { method: 'POST', body: JSON.stringify({ plataforma: plataformaAlvo }) });
+      let idExternoFinal = `MOCK-${Math.floor(Math.random()*10000)}`;
+
+      if (plataformaAlvo === 'mercadolivre') {
+        const res = await fetch('/api/integracoes/mercadolivre/publish', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lote, preco: parseFloat(precoVenda), plataforma: 'mercadolivre' }) 
+        });
+        
+        const data = await res.json();
+
+        if (data.needsManualLink || !res.ok) {
+          const manualUrl = prompt("Não foi possível conectar automaticamente à API do Mercado Livre (ou faltam permissões).\n\nCrie o anúncio manualmente no ML e cole o link final aqui para salvar no sistema:");
+          
+          if (!manualUrl) {
+            alert("Operação cancelada.");
+            setSalvando(false);
+            return;
+          }
+
+          // Tentar extrair o ID MCO-123456 do link ou salvar o link inteiro
+          const match = manualUrl.match(/MCO-?\d+/i);
+          idExternoFinal = match ? match[0].replace('-', '') : `MCO-MANUAL-${Math.floor(Math.random()*1000)}`;
+        } else {
+          // Sucesso na API!
+          idExternoFinal = data.id_externo;
+        }
+      } else {
+        // Outras plataformas ainda usam Mock
+        await fetch('/api/integracoes/mock', { method: 'POST', body: JSON.stringify({ plataforma: plataformaAlvo }) });
+      }
       
       // Atualizar o JSONB de integracoes e salvar o preço (caso tenha mudado)
       ints[plataformaAlvo] = {
         publicado_em: new Date().toISOString(),
-        id_externo: `MOCK-${Math.floor(Math.random()*10000)}`,
+        id_externo: idExternoFinal,
         preco: parseFloat(precoVenda)
       };
 
@@ -137,8 +166,8 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
       setModalAberto(false);
       carregarDados(); // Recarrega tela
       alert(`Publicado com sucesso na plataforma: ${plataformaAlvo.toUpperCase()}!`);
-    } catch (e) {
-      alert("Erro ao publicar.");
+    } catch (e: any) {
+      alert("Erro ao publicar: " + e.message);
     } finally {
       setSalvando(false);
     }
@@ -275,7 +304,30 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
                         {isPublicado ? (
                           <div>
                             <p className="text-xs text-secondary font-medium">Preço Anunciado: <span className="font-bold text-on-surface">{formatCOP(intsRealizadas[plat.id].preco)}</span></p>
-                            <a href="#" className="text-xs text-primary font-bold mt-2 inline-block hover:underline">Ver Anúncio Externo</a>
+                            {intsRealizadas[plat.id].id_externo.startsWith('MOCK') ? (
+                              <button 
+                                onClick={() => alert('Este é um anúncio de teste (MOCK). A integração real gerará um link válido para a plataforma.')}
+                                className="text-xs text-primary font-bold mt-2 inline-block hover:underline text-left"
+                              >
+                                Ver Anúncio Externo (Teste)
+                              </button>
+                            ) : (
+                              <a 
+                                href={
+                                  plat.id === 'mercadolivre' ? `https://articulo.mercadolibre.com.co/${intsRealizadas[plat.id].id_externo}` :
+                                  plat.id === 'amazon' ? `https://www.amazon.com/dp/${intsRealizadas[plat.id].id_externo}` :
+                                  plat.id === 'facebook' ? `https://www.facebook.com/marketplace/item/${intsRealizadas[plat.id].id_externo}` :
+                                  plat.id === 'exito' ? `https://www.exito.com/p-${intsRealizadas[plat.id].id_externo}` :
+                                  plat.id === 'falabella' ? `https://www.falabella.com.co/falabella-co/product/${intsRealizadas[plat.id].id_externo}` :
+                                  '#'
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary font-bold mt-2 inline-block hover:underline"
+                              >
+                                Ver Anúncio Externo
+                              </a>
+                            )}
                           </div>
                         ) : (
                           <button 

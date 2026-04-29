@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, ImagePlus } from 'lucide-react';
+import { ArrowLeft, Save, ImagePlus, Camera, Package, Truck, Calendar, DollarSign, Calculator } from 'lucide-react';
 
 export default function NovaCompraPage() {
   const router = useRouter();
   
-  // States para opções dos selects
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [especies, setEspecies] = useState<any[]>([]);
@@ -16,18 +15,15 @@ export default function NovaCompraPage() {
   const [isVaso, setIsVaso] = useState(false);
   const [modoCalcVaso, setModoCalcVaso] = useState<'direto' | 'dimensoes'>('direto');
   const [vasoDimensoes, setVasoDimensoes] = useState({ diametroCm: '', alturaCm: '' });
-
-  // Evidência Fotográfica opcional
   const [foto, setFoto] = useState<File | null>(null);
 
-  // States do Formulário
   const [form, setForm] = useState({
     categoria_id: '',
     especie_id: '',
     fornecedor_id: '',
     nome_item: '',
     data_compra: new Date().toISOString().split('T')[0],
-    unidade_medida: 'Gramas', // Default ajustado para mais comum
+    unidade_medida: 'Gramas',
     quantidade_comprada: '',
     custo_total: '',
     capacidade_substrato_vazao: ''
@@ -51,7 +47,6 @@ export default function NovaCompraPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Se mudou a categoria, verificar se é "semente" ou "vaso"
     if (name === 'categoria_id') {
       const selectedCat = categorias.find(c => c.id === value);
       const catName = selectedCat?.nome.toLowerCase() || '';
@@ -71,7 +66,6 @@ export default function NovaCompraPage() {
       const d = parseFloat(novasDimensoes.diametroCm);
       const h = parseFloat(novasDimensoes.alturaCm);
       const raio = d / 2;
-      // Volume Cilindro: Pi * R² * H (em cm³). Divide por 1000 para Litros.
       const volLitros = (Math.PI * Math.pow(raio, 2) * h) / 1000;
       setForm(prev => ({ ...prev, capacidade_substrato_vazao: volLitros.toFixed(3) }));
     } else {
@@ -86,7 +80,6 @@ export default function NovaCompraPage() {
     try {
       let urlFoto = null;
 
-      // Upload de Foto da Nota (Se existir)
       if (foto) {
         const fileName = `compra-${Date.now()}-${foto.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
         const { error: uploadError } = await supabase.storage
@@ -107,18 +100,16 @@ export default function NovaCompraPage() {
         data_compra: form.data_compra,
         unidade_medida: form.unidade_medida,
         quantidade_comprada: parseFloat(form.quantidade_comprada),
-        quantidade_restante: parseFloat(form.quantidade_comprada), // Estoque inicial
+        quantidade_restante: parseFloat(form.quantidade_comprada),
         custo_total: parseFloat(form.custo_total),
         capacidade_substrato_vazao: isVaso && form.capacidade_substrato_vazao ? parseFloat(form.capacidade_substrato_vazao) : 0,
         url_foto: urlFoto
       };
 
       const { error } = await supabase.from('compras_insumos').insert([payload]);
-
       if (error) throw error;
       
-      alert('Compra salva com sucesso!');
-      router.push('/admin/compras'); // Voltar para tabela
+      router.push('/admin/compras');
       router.refresh();
     } catch (err: any) {
       alert(`Erro ao salvar: ${err.message}`);
@@ -128,135 +119,162 @@ export default function NovaCompraPage() {
   };
 
   return (
-    <div className="bg-surface min-h-screen text-on-surface">
-      <nav className="border-b border-surface-container-highest px-8 py-4 bg-surface-container-lowest flex items-center gap-4">
-        <button onClick={() => router.back()} className="p-2 hover:bg-surface-container-high rounded-full transition">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-bold">Registrar Nova Compra</h1>
-      </nav>
+    <div className="bg-background min-h-screen text-on-surface pb-20">
+      {/* Header App Style */}
+      <header className="sticky top-0 z-[100] bg-surface border-b border-surface-container px-6 py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.back()} className="p-2 hover:bg-surface-container rounded-full transition">
+            <ArrowLeft size={24} className="text-secondary" />
+          </button>
+          <div>
+            <h1 className="text-lg font-black text-on-surface leading-tight">Nova Compra</h1>
+            <p className="text-[10px] font-bold text-secondary uppercase tracking-widest">Registrar Insumo</p>
+          </div>
+        </div>
+      </header>
 
-      <main className="p-8 max-w-4xl mx-auto">
-        <form onSubmit={handleSalvar} className="bg-surface-container-low p-8 rounded-2xl border border-surface-container-highest shadow-sm space-y-6">
+      <main className="px-6 py-8 space-y-8">
+        <form onSubmit={handleSalvar} className="space-y-8">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Bloco: O que é? */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold border-b border-surface-container-highest pb-2">Identificação</h2>
-              
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Nome / Descrição do Item</label>
-                <input required type="text" name="nome_item" value={form.nome_item} onChange={handleChange} placeholder="Ex: Sementes Premium Ouro 0.5g" className="w-full bg-surface border border-surface-container-highest text-on-surface placeholder:text-secondary rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary outline-none" />
+          {/* Seção 1: Identificação */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <Package size={16} className="text-primary" />
+              <h2 className="text-xs font-black text-secondary uppercase tracking-widest">Identificação</h2>
+            </div>
+            
+            <div className="bg-surface-container-low p-6 rounded-[2rem] border border-surface-container shadow-sm space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">O que você comprou?</label>
+                <input required type="text" name="nome_item" value={form.nome_item} onChange={handleChange} placeholder="Ex: Sementes Premium" className="w-full bg-white border-2 border-surface-container rounded-2xl px-5 py-3 outline-none focus:border-primary font-bold shadow-sm transition-all" />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Categoria</label>
-                <select required name="categoria_id" value={form.categoria_id} onChange={handleChange} className="w-full bg-surface border border-surface-container-highest text-on-surface rounded-xl px-4 py-2 outline-none">
-                  <option value="">Selecione...</option>
-                  {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                </select>
-              </div>
-
-              {isSemente && (
-                <div>
-                  <label className="block text-sm font-medium text-primary mb-1">A qual espécie pertence?</label>
-                  <select required name="especie_id" value={form.especie_id} onChange={handleChange} className="w-full bg-primary-fixed text-on-primary-fixed-variant border border-primary-container rounded-xl px-4 py-2 outline-none font-bold">
-                    <option value="">Selecione a Espécie...</option>
-                    {especies.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Categoria</label>
+                  <select required name="categoria_id" value={form.categoria_id} onChange={handleChange} className="w-full bg-white border-2 border-surface-container rounded-2xl px-5 py-3 outline-none font-bold">
+                    <option value="">Selecione...</option>
+                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                   </select>
                 </div>
-              )}
 
-              {isVaso && (
-                <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-3">
-                  <div>
-                    <label className="block text-sm font-bold text-primary mb-1">Capacidade Interna (Volumetria)</label>
-                    <p className="text-[10px] font-medium text-secondary leading-tight">Como deseja informar o volume de terra que este vaso consome?</p>
+                {isSemente && (
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Espécie Associada</label>
+                    <select required name="especie_id" value={form.especie_id} onChange={handleChange} className="w-full bg-primary/5 border-2 border-primary/30 text-primary rounded-2xl px-5 py-3 outline-none font-black shadow-sm">
+                      <option value="">Selecione a Espécie...</option>
+                      {especies.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                    </select>
                   </div>
-                  
-                  <div className="flex bg-surface-container-high p-1 rounded-lg">
-                    <button type="button" onClick={() => setModoCalcVaso('direto')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${modoCalcVaso === 'direto' ? 'bg-primary text-on-primary shadow' : 'text-secondary'}`}>Informar Litros</button>
-                    <button type="button" onClick={() => setModoCalcVaso('dimensoes')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${modoCalcVaso === 'dimensoes' ? 'bg-primary text-on-primary shadow' : 'text-secondary'}`}>Usar Régua/Trena</button>
-                  </div>
-
-                  {modoCalcVaso === 'dimensoes' ? (
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <label className="text-[10px] font-bold text-secondary uppercase">Diâmetro (Boca) cm</label>
-                        <input type="number" step="0.1" name="diametroCm" value={vasoDimensoes.diametroCm} onChange={handleDimensoesChange} placeholder="Ex: 15" className="w-full bg-surface border border-primary/30 text-on-surface rounded-lg px-3 py-2 outline-none font-bold mt-1" />
-                      </div>
-                      <div className="flex-1">
-                        <label className="text-[10px] font-bold text-secondary uppercase">Altura (cm)</label>
-                        <input type="number" step="0.1" name="alturaCm" value={vasoDimensoes.alturaCm} onChange={handleDimensoesChange} placeholder="Ex: 20" className="w-full bg-surface border border-primary/30 text-on-surface rounded-lg px-3 py-2 outline-none font-bold mt-1" />
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div>
-                    <label className="text-[10px] font-bold text-secondary uppercase">Resultado em Litros (L/Kg)</label>
-                    <input required type="number" step="0.001" readOnly={modoCalcVaso === 'dimensoes'} name="capacidade_substrato_vazao" value={form.capacidade_substrato_vazao} onChange={handleChange} placeholder="Ex: 0.5" className={`w-full bg-surface border border-primary/30 text-on-surface rounded-xl px-4 py-2 outline-none font-bold mt-1 ${modoCalcVaso === 'dimensoes' ? 'bg-primary/10 cursor-not-allowed' : ''}`} />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+          </section>
 
-            {/* Bloco: Valores e Origem */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold border-b border-surface-container-highest pb-2">Fornecedor e Nota</h2>
+          {/* Seção 2: Medidas Específicas (Vaso/Bandeja) */}
+          {isVaso && (
+            <section className="space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2 px-1">
+                <Calculator size={16} className="text-secondary" />
+                <h2 className="text-xs font-black text-secondary uppercase tracking-widest">Volumetria</h2>
+              </div>
+              
+              <div className="bg-surface-container-low p-6 rounded-[2rem] border border-surface-container shadow-sm space-y-4">
+                <div className="flex bg-white p-1.5 rounded-2xl border border-surface-container">
+                  <button type="button" onClick={() => setModoCalcVaso('direto')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition ${modoCalcVaso === 'direto' ? 'bg-primary text-on-primary shadow-lg' : 'text-secondary'}`}>Informar Litros</button>
+                  <button type="button" onClick={() => setModoCalcVaso('dimensoes')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition ${modoCalcVaso === 'dimensoes' ? 'bg-primary text-on-primary shadow-lg' : 'text-secondary'}`}>Calcular Dimensões</button>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Fornecedor</label>
-                <select required name="fornecedor_id" value={form.fornecedor_id} onChange={handleChange} className="w-full bg-surface border border-surface-container-highest text-on-surface rounded-xl px-4 py-2 outline-none">
-                  <option value="">Selecione um fornecedor...</option>
+                {modoCalcVaso === 'dimensoes' && (
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-secondary uppercase tracking-widest ml-1">Boca (cm)</label>
+                      <input type="number" step="0.1" name="diametroCm" value={vasoDimensoes.diametroCm} onChange={handleDimensoesChange} placeholder="15" className="w-full bg-white border border-surface-container rounded-xl px-4 py-2 font-black" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-secondary uppercase tracking-widest ml-1">Altura (cm)</label>
+                      <input type="number" step="0.1" name="alturaCm" value={vasoDimensoes.alturaCm} onChange={handleDimensoesChange} placeholder="20" className="w-full bg-white border border-surface-container rounded-xl px-4 py-2 font-black" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                  <label className="text-[9px] font-black text-primary uppercase tracking-widest">Resultado do Volume (L/Kg)</label>
+                  <input required type="number" step="0.001" readOnly={modoCalcVaso === 'dimensoes'} name="capacidade_substrato_vazao" value={form.capacidade_substrato_vazao} onChange={handleChange} className={`w-full bg-transparent text-xl font-black text-primary outline-none mt-1 ${modoCalcVaso === 'dimensoes' ? 'opacity-70' : ''}`} placeholder="0.000" />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Seção 3: Valores e Logística */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <Truck size={16} className="text-secondary" />
+              <h2 className="text-xs font-black text-secondary uppercase tracking-widest">Logística e Valores</h2>
+            </div>
+            
+            <div className="bg-surface-container-low p-6 rounded-[2rem] border border-surface-container shadow-sm space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Fornecedor</label>
+                <select required name="fornecedor_id" value={form.fornecedor_id} onChange={handleChange} className="w-full bg-white border-2 border-surface-container rounded-2xl px-5 py-3 outline-none font-bold">
+                  <option value="">Selecione...</option>
                   {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome_fantasia}</option>)}
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Data da Compra</label>
-                <input required type="date" name="data_compra" value={form.data_compra} onChange={handleChange} className="w-full bg-surface border border-surface-container-highest text-on-surface rounded-xl px-4 py-2 outline-none" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Data</label>
+                  <input required type="date" name="data_compra" value={form.data_compra} onChange={handleChange} className="w-full bg-white border-2 border-surface-container rounded-2xl px-5 py-3 outline-none font-bold" />
+                </div>
+                <div className="space-y-1.5 text-right">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest mr-1">Foto da Nota</label>
+                  <label className="flex items-center justify-center gap-2 h-[52px] bg-surface-container-high border-2 border-dashed border-surface-container rounded-2xl px-4 cursor-pointer text-primary active:scale-95 transition">
+                    <Camera size={18} />
+                    <span className="text-[10px] font-black uppercase truncate">{foto ? 'Anexada' : 'Anexar'}</span>
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => setFoto(e.target.files?.[0] || null)} className="hidden" />
+                  </label>
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Evidência (Recibo/Pacote) - Opcional</label>
-                <label className="flex items-center gap-2 cursor-pointer w-full bg-surface border border-dashed border-surface-container-highest rounded-xl px-4 py-2 text-primary hover:bg-surface-container-high transition">
-                  <ImagePlus size={18} />
-                  <span className="text-sm">{foto ? foto.name : 'Anexar Foto ou PDF (Clique)'}</span>
-                  <input type="file" accept="image/*,.pdf" onChange={(e) => setFoto(e.target.files?.[0] || null)} className="hidden" />
-                </label>
+
+              <div className="pt-4 border-t border-surface-container grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Quantidade</label>
+                  <div className="flex items-center bg-white border-2 border-surface-container rounded-2xl px-5 py-3">
+                    <input required type="number" step="0.0001" name="quantidade_comprada" value={form.quantidade_comprada} onChange={handleChange} placeholder="0.0" className="w-full outline-none font-black" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Unidade</label>
+                  <select required name="unidade_medida" value={form.unidade_medida} onChange={handleChange} className="w-full bg-white border-2 border-surface-container rounded-2xl px-4 py-3 outline-none font-bold text-xs">
+                    <option value="Gramas">Gramas</option>
+                    <option value="Kg">Kg</option>
+                    <option value="Litros">Litros</option>
+                    <option value="Unidades">Unid.</option>
+                  </select>
+                </div>
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-green-700 uppercase tracking-widest ml-1">Custo Total (NF)</label>
+                <div className="relative">
+                  <DollarSign size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-green-600 opacity-50" />
+                  <input required type="number" step="0.01" name="custo_total" value={form.custo_total} onChange={handleChange} placeholder="0.00" className="w-full bg-white border-2 border-green-200 text-green-900 rounded-2xl pl-12 pr-5 py-4 outline-none focus:border-green-600 font-black text-xl shadow-sm transition-all" />
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-surface-container-highest bg-surface-container-lowest -mx-8 px-8 py-6 rounded-b-2xl">
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Qtd Comprada</label>
-              <input required type="number" step="0.0001" name="quantidade_comprada" value={form.quantidade_comprada} onChange={handleChange} placeholder="Ex: 0.5" className="w-full bg-surface border border-surface-container-highest text-on-surface placeholder:text-secondary rounded-xl px-4 py-2 outline-none" />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Unidade de Medida</label>
-              <select required name="unidade_medida" value={form.unidade_medida} onChange={handleChange} className="w-full bg-surface border border-surface-container-highest text-on-surface rounded-xl px-4 py-2 outline-none">
-                <option value="Gramas">Gramas</option>
-                <option value="Kg">Kg</option>
-                <option value="Litros">Litros</option>
-                <option value="Unidades">Unidades (Mudas/Vasos)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Custo Total (Na nota)</label>
-              <input required type="number" step="0.01" name="custo_total" value={form.custo_total} onChange={handleChange} placeholder="Ex: 7000" className="w-full bg-surface border border-surface-container-highest text-on-surface placeholder:text-secondary rounded-xl px-4 py-2 outline-none" />
-            </div>
-          </div>
-
-          <div className="pt-2 flex justify-end">
-            <button disabled={loading} type="submit" className="bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold px-8 py-3 rounded-xl shadow-md hover:shadow-lg transition disabled:opacity-50 flex items-center gap-2">
-              <Save size={20} />
-              {loading ? 'Processando NF...' : 'Gravar Compra no Estoque'}
-            </button>
-          </div>
+          <button disabled={loading} type="submit" className="w-full py-5 bg-primary text-on-primary font-black rounded-3xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 transition-all uppercase tracking-widest text-sm">
+            {loading ? (
+              <span className="flex items-center gap-2">Processando...</span>
+            ) : (
+              <>
+                <Save size={20} />
+                <span>Salvar no Estoque</span>
+              </>
+            )}
+          </button>
         </form>
       </main>
     </div>
