@@ -204,6 +204,22 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
     }
   };
 
+  const handleDeclararPronto = async () => {
+    if(!confirm("Declarar este lote como pronto para venda?")) return;
+    setSalvando(true);
+    try {
+      await supabase.from('lotes_plantio')
+        .update({ status: 'ponto_de_venda' })
+        .eq('id', id);
+      alert("Lote declarado como PRONTO PARA VENDA!");
+      carregarDados();
+    } catch(e) {
+      alert("Erro ao atualizar status.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-secondary">Carregando lote...</div>;
   if (!lote) return <div className="p-8 text-center text-error">Lote não encontrado.</div>;
 
@@ -212,14 +228,27 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
   return (
     <div className="bg-surface min-h-screen text-on-surface pb-20">
       {/* Header */}
-      <nav className="border-b border-surface-container-highest px-8 py-4 bg-surface-container-lowest flex items-center gap-4">
-        <button onClick={() => router.back()} className="p-2 hover:bg-surface-container-high rounded-full transition">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold">Lote de {lote.especie?.nome}</h1>
-          <p className="text-xs text-secondary font-mono tracking-widest">REF: {lote.identificacao_lote}</p>
+      <nav className="border-b border-surface-container-highest px-8 py-4 bg-surface-container-lowest flex justify-between items-center gap-4">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.back()} className="p-2 hover:bg-surface-container-high rounded-full transition">
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-3">
+              Lote de {lote.especie?.nome}
+              <span className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded-full border ${lote.status === 'ponto_de_venda' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
+                {lote.status === 'ponto_de_venda' ? 'Pronto para Venda' : lote.status.replace('_', ' ')}
+              </span>
+            </h1>
+            <p className="text-xs text-secondary font-mono tracking-widest">REF: {lote.identificacao_lote}</p>
+          </div>
         </div>
+        
+        {lote.status !== 'ponto_de_venda' && lote.status !== 'esgotado_vendido' && lote.status !== 'perda_obito' && (
+           <button onClick={handleDeclararPronto} disabled={salvando} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-xl shadow-md transition flex items-center gap-2 text-sm disabled:opacity-50">
+             <CheckCircle2 size={16}/> Declarar Pronto
+           </button>
+        )}
       </nav>
 
       <main className="p-8 max-w-5xl mx-auto space-y-8">

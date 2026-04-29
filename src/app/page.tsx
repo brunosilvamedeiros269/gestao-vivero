@@ -980,7 +980,7 @@ export default function TelaProdutorApp() {
 
                     <button onClick={() => setSheetView('foto')} className="w-full flex items-center gap-4 bg-surface-container-high p-4 rounded-2xl text-left transition"><div className="p-3 bg-surface text-on-surface rounded-xl shadow-sm"><Camera size={20}/></div><div><p className="font-bold text-on-surface">Capturar Laudo (Geral)</p></div></button>
 
-                    {(abaAtiva === 'bercario') && (
+                    {loteAtivoId && (loteAtivoId.status === 'germinando' || loteAtivoId.status === 'em_crescimento') && (
                       <button onClick={handleDeclararPronto} className="w-full flex items-center gap-4 bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl text-left"><div className="p-3 bg-amber-500 text-black rounded-xl shadow-sm"><Sparkles size={20}/></div><div><p className="font-bold text-amber-500">Floresceu (Declarar Pronto)</p></div></button>
                     )}
 
