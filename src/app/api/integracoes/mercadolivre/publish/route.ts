@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     const mlPayload = {
       title: titulo,
-      category_id: "MCO1284", 
+      category_id: "MCO441826", 
       price: preco,
       currency_id: "COP",
       available_quantity: lote.quantidade_plantada || 1,
@@ -39,9 +39,13 @@ export async function POST(req: Request) {
       description: {
         plain_text: `Venda de lote de plantas.\n\nEspécie: ${lote.especie?.nome}\nLote ID: ${lote.identificacao_lote}\nCultivo registrado e monitorado pelo sistema de gestão de viveiros.`
       },
+      attributes: [
+        { id: "SPECIES_NAME", value_name: lote.especie?.nome || "Planta Mista" },
+        { id: "PLANT_TYPE", value_name: "Planta Decorativa" }
+      ],
       pictures: [
         {
-          source: "https://http2.mlstatic.com/D_NQ_NP_2X_789422-MCO71221764724_082023-F.webp" // Placeholder genérico para evitar erro de imagem nula
+          source: "https://images.unsplash.com/photo-1416879598555-56fa2b8c56cc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
         }
       ]
     };
