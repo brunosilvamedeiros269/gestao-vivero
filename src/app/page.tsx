@@ -1,7 +1,11 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Leaf, Droplets, Sprout, ShieldAlert, Camera, Sparkles, ArrowRight, Camera as CameraIcon, Plus, LayoutGrid, PackageOpen, Skull, ThermometerSun, QrCode, ArrowLeft, Users, Flower2, AlertTriangle, X, Bot } from 'lucide-react';
+import { 
+  Leaf, Droplets, Sprout, ShieldAlert, Camera, Sparkles, ArrowRight, Camera as CameraIcon, Plus, LayoutGrid, PackageOpen, Skull, ThermometerSun, QrCode, ArrowLeft, Users, Flower2, AlertTriangle, X, Bot,
+  DollarSign, ShoppingBag, AlertCircle, TrendingUp, Settings, Briefcase
+} from 'lucide-react';
+import Link from 'next/link';
 import { RegistrarUsoInsumo } from '@/components/RegistrarUsoInsumo';
 import ScannerQR from '@/components/ScannerQR';
 import NotificationBell from '@/components/NotificationBell';
@@ -15,9 +19,15 @@ export default function TelaProdutorApp() {
   const [substratos, setSubstratos] = useState<any[]>([]);
   
   const [loading, setLoading] = useState(true);
-  const [abaAtiva, setAbaAtiva] = useState<'bercario' | 'prontas'>('bercario');
+  const [abaAtiva, setAbaAtiva] = useState<'bercario' | 'prontas' | 'admin'>('bercario');
   const [isScanning, setIsScanning] = useState(false);
   const [loteAtivoId, setLoteAtivoId] = useState<any>(null);
+
+  // Dashboard Admin States
+  const [estoqueValor, setEstoqueValor] = useState(0);
+  const [custoEnterrado, setCustoEnterrado] = useState(0);
+  const [vendaProjetada, setVendaProjetada] = useState(0);
+  const [insumosCriticos, setInsumosCriticos] = useState(0);
   
   // sheetView: 'menu' | 'foto' | 'baixa_parcial' | 'adicionar_mudas' | 'novo_lote'
   const [sheetView, setSheetView] = useState<string>('menu');
@@ -116,6 +126,29 @@ export default function TelaProdutorApp() {
 
     if (L) {
       processarAlertasAutomaticos(L, V || [], S || []);
+
+      // Cálculo Admin
+      let valorParado = 0;
+      let alertasCard = 0;
+      const todosInsumos = [...(V || []), ...(S || [])];
+      todosInsumos.forEach(i => {
+        const c_unit = i.quantidade_comprada > 0 ? (Number(i.custo_total) / Number(i.quantidade_comprada)) : 0;
+        valorParado += Number(i.quantidade_restante) * c_unit;
+        if (Number(i.quantidade_restante) <= 5) alertasCard++;
+      });
+      setEstoqueValor(valorParado);
+      setInsumosCriticos(alertasCard);
+
+      let custoAbsorvido = 0;
+      let vProjetada = 0;
+      L.forEach((lote: any) => {
+        if (lote.status !== 'esgotado_vendido' && lote.status !== 'perda_obito') {
+           custoAbsorvido += Number(lote.custo_acumulado || 0);
+           vProjetada += Number(lote.preco_venda_estimado || 0);
+        }
+      });
+      setCustoEnterrado(custoAbsorvido);
+      setVendaProjetada(vProjetada);
     }
 
     setLoading(false);
@@ -581,12 +614,17 @@ export default function TelaProdutorApp() {
 
       <div className="px-6 py-4">
         <div className="flex bg-surface-container-high rounded-full p-1">
-          <button onClick={() => setAbaAtiva('bercario')} className={`flex-1 py-3 text-sm font-bold rounded-full transition ${abaAtiva === 'bercario' ? 'bg-primary text-on-primary shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
+          <button onClick={() => setAbaAtiva('bercario')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'bercario' ? 'bg-primary text-on-primary shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
             🌱 Berçário
           </button>
-          <button onClick={() => setAbaAtiva('prontas')} className={`flex-1 py-3 text-sm font-bold rounded-full transition ${abaAtiva === 'prontas' ? 'bg-amber-500 text-black shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
+          <button onClick={() => setAbaAtiva('prontas')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'prontas' ? 'bg-amber-500 text-black shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
             🌻 Prontas
           </button>
+          {userRole === 'admin' && (
+            <button onClick={() => setAbaAtiva('admin')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'admin' ? 'bg-on-surface text-surface shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
+              📊 Gestão
+            </button>
+          )}
         </div>
       </div>
 
@@ -707,6 +745,112 @@ export default function TelaProdutorApp() {
             </div>
           </div>
         ))}
+
+        {(!loading && abaAtiva === 'admin') && (
+          <div className="space-y-6 pb-10">
+            {/* Dashboard Financeiro Rápido */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-surface-container-low p-4 rounded-3xl border border-surface-container shadow-sm">
+                <p className="text-[10px] font-bold text-secondary uppercase mb-1">Capital Estoque</p>
+                <p className="text-lg font-black text-on-surface">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estoqueValor)}</p>
+              </div>
+              <div className="bg-surface-container-low p-4 rounded-3xl border border-surface-container shadow-sm">
+                <p className="text-[10px] font-bold text-secondary uppercase mb-1">Custo em Campo</p>
+                <p className="text-lg font-black text-error">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(custoEnterrado)}</p>
+              </div>
+              <div className="bg-primary/10 p-4 rounded-3xl border border-primary/20 shadow-sm col-span-2">
+                <p className="text-[10px] font-bold text-primary uppercase mb-1">Venda Projetada</p>
+                <p className="text-2xl font-black text-primary">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendaProjetada)}</p>
+              </div>
+            </div>
+
+            {/* Atalhos de Gestão */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-secondary uppercase tracking-widest px-1">Ferramentas de Gestão</h4>
+              
+              <Link href="/admin/compras" className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl hover:border-primary transition group">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition">
+                    <ShoppingBag size={24} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface">Gestão de Compras</p>
+                    <p className="text-xs text-secondary">Registrar insumos, adubos e ferramentas.</p>
+                  </div>
+                </div>
+                <ArrowRight size={20} className="text-surface-container-highest" />
+              </Link>
+
+              <div className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl opacity-50 grayscale cursor-not-allowed">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
+                    <Briefcase size={24} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface">Folha de Pagamento</p>
+                    <p className="text-xs text-secondary">Cálculo de horas trabalhadas (Em breve).</p>
+                  </div>
+                </div>
+                <Settings size={20} className="text-surface-container-highest" />
+              </div>
+
+              <div className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl opacity-50 grayscale cursor-not-allowed">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl">
+                    <TrendingUp size={24} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface">Relatórios de Perda</p>
+                    <p className="text-xs text-secondary">Análise histórica de mortalidade.</p>
+                  </div>
+                </div>
+                <Settings size={20} className="text-surface-container-highest" />
+              </div>
+
+              <Link href="/admin/especies" className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl hover:border-primary transition group">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 text-green-600 rounded-2xl group-hover:bg-green-500 group-hover:text-white transition">
+                    <Leaf size={24} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface">Gestão de Espécies</p>
+                    <p className="text-xs text-secondary">Catálogo de plantas e tempos de cultivo.</p>
+                  </div>
+                </div>
+                <ArrowRight size={20} className="text-surface-container-highest" />
+              </Link>
+
+              <button 
+                onClick={() => { setLoteAtivoId(true); setSheetView('configuracoes'); }}
+                className="w-full flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl hover:border-primary transition group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-slate-100 text-slate-600 rounded-2xl group-hover:bg-slate-500 group-hover:text-white transition">
+                    <Settings size={24} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface">Configurações</p>
+                    <p className="text-xs text-secondary">Ajustar parâmetros do sistema.</p>
+                  </div>
+                </div>
+                <ArrowRight size={20} className="text-surface-container-highest" />
+              </button>
+            </div>
+
+            {/* Insumos Críticos */}
+            {insumosCriticos > 0 && (
+              <div className="p-4 bg-error/10 border border-error/20 rounded-3xl flex items-center gap-4">
+                <div className="p-2 bg-error text-white rounded-full">
+                  <AlertCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-error">Atenção ao Estoque</p>
+                  <p className="text-xs text-error/80">Existem {insumosCriticos} itens com estoque crítico. Providencie a compra.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* FABs */}
@@ -1410,6 +1554,46 @@ export default function TelaProdutorApp() {
               </div>
             )}
             
+            {/* ==== VIEW: CONFIGURACOES ==== */}
+            {sheetView === 'configuracoes' && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-surface-container rounded-lg text-primary"><Settings size={20}/></div>
+                  <h2 className="text-xl font-black text-on-surface">Configurações</h2>
+                </div>
+                <div className="bg-surface-container-low p-4 rounded-3xl space-y-4">
+                  <div>
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest block mb-2">Valor da Hora de Trabalho (R$)</label>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-surface-container-highest p-4 rounded-2xl flex items-center gap-2">
+                        <DollarSign size={18} className="text-secondary" />
+                        <input 
+                          type="number" 
+                          value={valorHoraConfig}
+                          onChange={(e) => setValorHoraConfig(parseFloat(e.target.value))}
+                          className="bg-transparent border-none outline-none font-bold text-on-surface w-full"
+                        />
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          const { error } = await supabase.from('configuracoes').update({ valor_hora_trabalho: valorHoraConfig }).eq('id', 1); // Assume ID 1
+                          if (error) {
+                             // Tenta insert se não houver ID 1
+                             await supabase.from('configuracoes').upsert({ id: 1, valor_hora_trabalho: valorHoraConfig });
+                          }
+                          alert('Configurações salvas!');
+                        }}
+                        className="p-4 bg-primary text-on-primary rounded-2xl shadow-lg"
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-secondary mt-2 leading-tight">Este valor é usado para calcular o custo de mão de obra absorvido pelos lotes.</p>
+                  </div>
+                </div>
+                <button onClick={() => setLoteAtivoId(null)} className="w-full py-4 bg-surface-container-highest text-on-surface font-bold rounded-2xl">Fechar</button>
+              </div>
+            )}
           </div>
         </div>
       )}

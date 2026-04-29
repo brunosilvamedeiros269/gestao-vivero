@@ -94,7 +94,7 @@ export default function NotificationBell({ role }: { role: 'admin' | 'funcionari
       {aberto && (
         <>
           <div className="fixed inset-0 z-[90]" onClick={() => setAberto(false)} />
-          <div className="absolute right-0 mt-3 w-[340px] bg-surface-container-lowest border border-surface-container-highest rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="absolute right-0 mt-3 w-[340px] bg-surface-container-lowest border border-surface-container-highest rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] z-[999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="p-5 bg-surface-container-low border-b border-surface-container-highest flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-base text-on-surface">Alertas do Viveiro</h3>
@@ -110,7 +110,7 @@ export default function NotificationBell({ role }: { role: 'admin' | 'funcionari
                   <div 
                     key={n.id} 
                     onClick={() => marcarComoLida(n.id)}
-                    className={`p-5 border-b border-surface-container last:border-0 hover:bg-surface-container-high cursor-pointer transition flex gap-4 ${!n.lida ? 'bg-primary/[0.03]' : ''}`}
+                    className={`p-5 border-b border-surface-container last:border-0 hover:bg-surface-container-high cursor-pointer transition flex gap-4 ${!n.lida ? 'bg-primary/[0.05]' : 'bg-surface'}`}
                   >
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${!n.lida ? 'bg-white shadow-sm' : 'bg-surface-container opacity-60'}`}>
                       {getIcon(n.tipo)}
