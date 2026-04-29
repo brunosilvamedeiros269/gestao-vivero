@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Tag, ShoppingCart, Info, CheckCircle2, History, AlertTriangle, QrCode, Sparkles } from 'lucide-react';
+import { ArrowLeft, Tag, ShoppingCart, Info, CheckCircle2, History, AlertTriangle, QrCode, Sparkles, Camera } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import Barcode from 'react-barcode';
 import Image from 'next/image';
@@ -35,6 +35,7 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
   const [garantiaAnuncio, setGarantiaAnuncio] = useState('');
   const [videoAnuncio, setVideoAnuncio] = useState('');
   const [gerandoIA, setGerandoIA] = useState(false);
+  const [fotoComercial, setFotoComercial] = useState<File | null>(null);
 
   // B2B State
   const [modalB2B, setModalB2B] = useState(false);
@@ -113,13 +114,10 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
   const formatCOP = (val: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
 
   const abrirModalPublicacao = (platId: string) => {
-    if (platId === 'mercadolivre' && fotosEvolucao.length === 0) {
-      alert("É obrigatório ter ao menos uma foto registrada na evolução do lote para publicar no Mercado Livre.");
-      return;
-    }
     setPlataformaAlvo(platId);
     setTituloAnuncio(`Planta ${lote.especie?.nome} - Lote ${lote.identificacao_lote}`.substring(0, 60));
     setDescricaoAnuncio(`Venda de lote de plantas.\n\nEspécie: ${lote.especie?.nome}\nLote ID: ${lote.identificacao_lote}\nCultivo registrado e monitorado pelo sistema de gestão de viveiros.`);
+    setFotoComercial(null);
     setModalAberto(true);
   };
 
@@ -157,7 +155,27 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
       let idExternoFinal = `MOCK-${Math.floor(Math.random()*10000)}`;
 
       if (plataformaAlvo === 'mercadolivre') {
-        const fotoRealUrl = fotosEvolucao.length > 0 ? fotosEvolucao[0].foto_url : null;
+        let fotoRealUrl = fotosEvolucao.length > 0 ? fotosEvolucao[0].foto_url : null;
+
+        // Se o usuário subiu uma foto comercial manual, usamos ela.
+        if (fotoComercial) {
+          const fileName = `comercial-${id}-${Date.now()}-${fotoComercial.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+          const { error: uploadError } = await supabase.storage
+            .from('fotos_evolutivas') // Reutilizando bucket ou criando um novo se preferir
+            .upload(fileName, fotoComercial);
+          
+          if (uploadError) throw uploadError;
+          
+          const { data: { publicUrl } } = supabase.storage.from('fotos_evolutivas').getPublicUrl(fileName);
+          fotoRealUrl = publicUrl;
+        }
+
+        if (!fotoRealUrl) {
+          alert("Por favor, selecione uma foto comercial ou registre uma evolução antes de publicar.");
+          setSalvando(false);
+          return;
+        }
+
         const res = await fetch('/api/integracoes/mercadolivre/publish', { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' },
@@ -554,6 +572,26 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
                   </div>
 
                   <div className="pt-2 border-t border-primary/10">
+                     <p className="text-xs font-bold text-secondary mb-2">Foto Comercial do Produto</p>
+                     <label className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-dashed border-primary/20 rounded-xl cursor-pointer hover:bg-primary/5 transition group mb-3">
+                        {fotoComercial ? (
+                          <div className="text-center">
+                            <CheckCircle2 size={24} className="text-green-500 mx-auto mb-1" />
+                            <span className="text-[10px] font-bold text-green-600 block truncate max-w-[200px]">{fotoComercial.name}</span>
+                            <button onClick={(e) => { e.preventDefault(); setFotoComercial(null); }} className="text-[9px] text-error font-black uppercase mt-1">Remover</button>
+                          </div>
+                        ) : (
+                          <>
+                            <Camera size={24} className="text-primary group-hover:scale-110 transition" />
+                            <div className="text-center">
+                              <span className="text-[10px] font-bold text-primary block uppercase tracking-wider">Subir Foto Comercial</span>
+                              <span className="text-[9px] text-secondary block">PNG ou JPG (Fundo branco recomendado)</span>
+                            </div>
+                          </>
+                        )}
+                        <input type="file" accept="image/*" onChange={(e) => setFotoComercial(e.target.files?.[0] || null)} className="hidden" />
+                     </label>
+
                      <p className="text-xs font-bold text-secondary mb-2">Atributos Opcionais</p>
                      <div className="grid grid-cols-2 gap-3">
                        <div>
