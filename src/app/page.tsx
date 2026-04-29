@@ -29,6 +29,7 @@ export default function TelaProdutorApp() {
   const [historicoDaPlanta, setHistoricoDaPlanta] = useState<any[]>([]);
 
   const carregarPlantasDoLote = async (loteId: string) => {
+    setPlantasDoLote([]);
     const { data } = await supabase.from('plantas').select('*').eq('lote_plantio_id', loteId).order('identificador_individual');
     if (data) setPlantasDoLote(data);
   };
@@ -74,6 +75,12 @@ export default function TelaProdutorApp() {
     carregarTudo();
   }, []);
 
+  useEffect(() => {
+    if (loteAtivoId && typeof loteAtivoId === 'object') {
+      carregarPlantasDoLote(loteAtivoId.id);
+    }
+  }, [loteAtivoId?.id]);
+
   async function carregarTudo() {
     setLoading(true);
     // 1. Lotes
@@ -101,8 +108,91 @@ export default function TelaProdutorApp() {
     const { data: config } = await supabase.from('configuracoes').select('valor_hora_trabalho').limit(1).single();
     if (config) setValorHoraConfig(config.valor_hora_trabalho || 0);
 
+    // Sincroniza lote ativo se houver
+    if (loteAtivoId && typeof loteAtivoId === 'object' && L) {
+       const atualizado = L.find((l: any) => l.id === loteAtivoId.id);
+       if (atualizado) setLoteAtivoId(atualizado);
+    }
+
+    if (L) {
+      processarAlertasAutomaticos(L, V || [], S || []);
+    }
+
     setLoading(false);
   }
+
+  const criarNotificacaoSeNaoExiste = async (titulo: string, mensagem: string, tipo: string, targetRole: string | null) => {
+    const { data } = await supabase.from('sistema_notificacoes')
+      .select('id')
+      .eq('titulo', titulo)
+      .eq('lida', false)
+      .limit(1);
+    
+    if (data && data.length > 0) return;
+
+    await supabase.from('sistema_notificacoes').insert({
+      titulo, mensagem, tipo, target_role: targetRole
+    });
+  };
+
+  const processarAlertasAutomaticos = async (lotesList: any[], vasosList: any[], subsList: any[]) => {
+    for (const l of lotesList) {
+      const totalInicial = (l.quantidade_plantada || 0) + (l.quantidade_morta || 0);
+      const taxaSobrevivencia = totalInicial > 0 ? (l.quantidade_plantada / totalInicial) * 100 : 100;
+      
+      // 1. Alerta de Mortalidade
+      if (taxaSobrevivencia < 70 && l.quantidade_plantada > 0) {
+        await criarNotificacaoSeNaoExiste(
+          `Mortalidade Alta: ${l.especie?.nome}`,
+          `O lote ${l.identificacao_lote} está com apenas ${taxaSobrevivencia.toFixed(0)}% de sobrevivência.`,
+          'merma',
+          'admin'
+        );
+      }
+
+      // 2. Alerta de Rega
+      const regasRealizadas = l.diario?.filter((t: any) => t.tipo_tarefa === 'Rega').length || 0;
+      const diasVida = calcDias(l.data_plantio);
+      const regasEsperadas = Math.max(1, Math.floor(diasVida / 2));
+      const conformidadeRega = (regasRealizadas / regasEsperadas) * 100;
+      
+      if (conformidadeRega < 50 && diasVida > 2) {
+        await criarNotificacaoSeNaoExiste(
+          `Rega Atrasada: ${l.identificacao_lote}`,
+          `A conformidade de rega caiu para ${conformidadeRega.toFixed(0)}%. Verifique a umidade do solo!`,
+          'operacional',
+          null
+        );
+      }
+
+      // 3. Alerta IA (Saúde/Doença)
+      const alertaIA = l.diario?.find((t: any) => 
+        t.analise_ia && 
+        (t.analise_ia.estado_saude?.toLowerCase().includes('estressada') || 
+         (t.analise_ia.doenca_detectada && t.analise_ia.doenca_detectada !== 'Nenhuma'))
+      );
+      if (alertaIA) {
+        await criarNotificacaoSeNaoExiste(
+          `Problema de Saúde: ${l.identificacao_lote}`,
+          `A IA detectou plantas doentes ou estressadas neste lote. Veja o laudo técnico.`,
+          'merma',
+          'admin'
+        );
+      }
+    }
+
+    // 4. Alerta de Estoque
+    for (const i of [...vasosList, ...subsList]) {
+      if (i.quantidade_restante < 10) {
+        await criarNotificacaoSeNaoExiste(
+          `Estoque Baixo: ${i.nome_item}`,
+          `Restam apenas ${i.quantidade_restante} unidades no estoque. Reposição necessária.`,
+          'estoque',
+          'admin'
+        );
+      }
+    }
+  };
 
   const lotesBercario = lotes.filter(l => l.status === 'germinando' || l.status === 'em_crescimento');
   const lotesProntos = lotes.filter(l => l.status === 'ponto_de_venda');
@@ -205,6 +295,43 @@ export default function TelaProdutorApp() {
       alert("Erro ao adicionar mudas: " + e.message);
     }
   };
+  
+  // Função para comprimir e redimensionar imagens antes do upload
+  const redimensionarImagem = (file: File, maxWidth = 1600): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height *= maxWidth / width;
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxWidth) {
+              width *= maxWidth / height;
+              height = maxWidth;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            resolve(blob || file);
+          }, 'image/jpeg', 0.8);
+        };
+      };
+    });
+  };
 
   // ============== LAUDOS E IA ==============
   const handleFotoUpload = async (e: React.FormEvent) => {
@@ -213,11 +340,14 @@ export default function TelaProdutorApp() {
     setUploading(true);
 
     try {
-      const fileExt = fotoFile.name.split('.').pop();
-      const fileName = `${loteAtivoId.id}_${Math.random()}.${fileExt}`;
+      const compressedBlob = await redimensionarImagem(fotoFile);
+      const fileExt = 'jpg'; // Forçamos jpg por causa da compressão canvas
+      const fileName = `${loteAtivoId.id}_${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError } = await supabase.storage.from('fotos_evolutivas').upload(filePath, fotoFile);
+      const { error: uploadError } = await supabase.storage.from('fotos_evolutivas').upload(filePath, compressedBlob, {
+        contentType: 'image/jpeg'
+      });
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('fotos_evolutivas').getPublicUrl(filePath);
@@ -254,11 +384,33 @@ export default function TelaProdutorApp() {
 
   const [analisandoId, setAnalisandoId] = useState<string | null>(null);
 
+  // Overlay de Carregamento IA
+  const LoadingOverlayIA = () => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-purple-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center text-center max-w-[80%] animate-in zoom-in-95 duration-500">
+        <div className="relative mb-6">
+          <div className="absolute inset-0 bg-purple-500/20 rounded-full animate-ping"></div>
+          <div className="relative bg-purple-600 p-6 rounded-full shadow-lg">
+            <Bot size={40} className="text-white"/>
+          </div>
+        </div>
+        <h3 className="text-xl font-black text-purple-900 mb-2 uppercase tracking-tight">IA Processando...</h3>
+        <p className="text-sm text-purple-700 font-medium leading-tight">Nosso agrônomo virtual está analisando as cores e texturas da planta para gerar o laudo técnico.</p>
+        <div className="mt-6 flex gap-2">
+          <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+          <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+          <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+        </div>
+      </div>
+    </div>
+  );
+
   const handleAnalisarIA = async (diarioItem: any) => {
     setAnalisandoId(diarioItem.id);
     try {
       const res = await fetch('/api/ai/analisar-planta', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fotoUrl: diarioItem.foto_url,
           especie: loteAtivoId.especie?.nome || 'Planta',
@@ -270,16 +422,45 @@ export default function TelaProdutorApp() {
       if (!res.ok) throw new Error(data.error);
 
       // Salva no banco
-      await supabase.from('lote_diario_tarefas').update({
+      const { error: updateError } = await supabase.from('lote_diario_tarefas').update({
         analise_ia: data.analise
       }).eq('id', diarioItem.id);
 
-      alert('Análise da IA concluída!');
-      carregarTudo();
+      if (updateError) {
+        console.error("Erro no Update Supabase:", updateError);
+        throw new Error("Não foi possível salvar o laudo no banco: " + updateError.message);
+      }
+
+      await carregarTudo();
+      if (plantaAtiva) {
+        await carregarHistoricoDaPlanta(plantaAtiva.id);
+      }
     } catch (e: any) {
+      console.error("Erro completo handleAnalisarIA:", e);
       alert("Erro da IA: " + e.message);
     } finally {
       setAnalisandoId(null);
+    }
+  };
+
+  const handleTarefaIndividual = async (tarefa: 'Abono' | 'Veneno') => {
+    if (!plantaAtiva || !loteAtivoId) return;
+    setUploading(true);
+    try {
+      const { error } = await supabase.from('lote_diario_tarefas').insert({
+        lote_plantio_id: loteAtivoId.id,
+        planta_id: plantaAtiva.id,
+        tipo_tarefa: tarefa === 'Abono' ? 'Abono' : 'Defensivo',
+        observacao: `${tarefa} aplicado individualmente.`,
+        data_execucao: new Date().toISOString()
+      });
+      if (error) throw error;
+      await carregarHistoricoDaPlanta(plantaAtiva.id);
+      alert(`${tarefa} registrado com sucesso!`);
+    } catch (e: any) {
+      alert("Erro ao registrar tarefa: " + e.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -607,6 +788,16 @@ export default function TelaProdutorApp() {
                 <div className="mb-4 pr-10">
                   <h2 className="text-2xl font-black text-on-surface leading-tight">{loteAtivoId.especie?.nome}</h2>
                   <p className="text-sm text-secondary font-medium mt-1 uppercase tracking-widest">{loteAtivoId.quantidade_plantada} Mudas Vivas ({loteAtivoId.identificacao_lote})</p>
+                  {/* Resumo da Última Análise IA se houver */}
+                  {loteAtivoId.diario?.find((d: any) => d.analise_ia) && (
+                    <div className="mt-3 bg-purple-500/10 border border-purple-500/20 p-3 rounded-xl">
+                      <p className="text-[10px] font-black text-purple-700 uppercase flex items-center gap-1 mb-1"><Bot size={12}/> Último Diagnóstico IA</p>
+                      <p className="text-xs text-purple-900 font-bold">
+                        {loteAtivoId.diario.find((d: any) => d.analise_ia).analise_ia.estado_saude}
+                      </p>
+                    </div>
+                  )}
+
                 </div>
 
                 {/* Sub-Aba Lote / Plantas */}
@@ -675,24 +866,28 @@ export default function TelaProdutorApp() {
                   <button onClick={() => setSheetView('plantas_lista')} className="flex-1 py-2 text-xs font-bold rounded-lg transition bg-primary text-on-primary shadow">
                     Plantas Individuais
                   </button>
+                  <button onClick={() => carregarPlantasDoLote(loteAtivoId.id)} className="p-2 text-secondary hover:text-primary transition">
+                    <Plus size={16} className="rotate-45" />
+                  </button>
                 </div>
 
                 <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                  {plantasDoLote.length === 0 && (
-                    <div className="text-center py-8 bg-surface-container-low rounded-2xl border border-dashed border-surface-container px-6">
-                      <p className="text-sm font-bold text-on-surface mb-2">Registros não encontrados</p>
-                      <p className="text-xs text-secondary mb-6">Este lote possui {loteAtivoId.quantidade_plantada} mudas, mas elas ainda não foram catalogadas individualmente.</p>
+                  {plantasDoLote.length < loteAtivoId.quantidade_plantada && (
+                    <div className="text-center py-6 bg-amber-50 rounded-2xl border border-dashed border-amber-300 px-6 mb-4">
+                      <p className="text-sm font-bold text-amber-900 mb-1">Catalogação Pendente</p>
+                      <p className="text-[10px] text-amber-700 mb-4">Este lote tem {loteAtivoId.quantidade_plantada} plantas, mas apenas {plantasDoLote.length} estão catalogadas.</p>
                       <button 
                         onClick={async () => {
                           setLoading(true);
-                          await criarPlantasDoLote(loteAtivoId.id, loteAtivoId.quantidade_plantada, loteAtivoId.identificacao_lote);
+                          const faltantes = loteAtivoId.quantidade_plantada - plantasDoLote.length;
+                          await criarPlantasDoLote(loteAtivoId.id, faltantes, loteAtivoId.identificacao_lote, plantasDoLote.length);
                           await carregarPlantasDoLote(loteAtivoId.id);
                           setLoading(false);
-                          alert(`${loteAtivoId.quantidade_plantada} registros individuais gerados com sucesso!`);
+                          alert(`${faltantes} novas plantas catalogadas!`);
                         }}
-                        className="bg-primary text-on-primary text-xs font-bold py-3 px-6 rounded-xl shadow-md hover:scale-105 transition"
+                        className="bg-amber-600 text-white text-[10px] font-bold py-2 px-4 rounded-lg shadow-sm hover:scale-105 transition"
                       >
-                        Catalogar {loteAtivoId.quantidade_plantada} Plantas Agora
+                        Catalogar {loteAtivoId.quantidade_plantada - plantasDoLote.length} Faltantes
                       </button>
                     </div>
                   )}
@@ -738,9 +933,47 @@ export default function TelaProdutorApp() {
                 </div>
 
                 <div className="space-y-3">
-                  {/* Timeline/Diário Individual (apenas visual por enquanto) */}
-                  <div className="bg-surface-container-low p-4 rounded-2xl border border-surface-container">
-                    <h3 className="font-bold text-sm text-on-surface mb-3 flex items-center gap-2"><CameraIcon size={16}/> Diário de Crescimento</h3>
+                  {/* Resumo do Último Laudo IA (Destaque) */}
+                  {historicoDaPlanta.find(h => h.analise_ia) && (
+                    <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-5 rounded-[2rem] text-white shadow-lg shadow-purple-200 animate-in fade-in slide-in-from-top-4 duration-500">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+                            <Bot size={20} className="text-white"/>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Parecer Técnico IA</p>
+                            <h3 className="text-lg font-bold leading-tight">Diagnóstico de Saúde</h3>
+                          </div>
+                        </div>
+                        <Sparkles size={20} className="opacity-50 animate-pulse"/>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+                          <p className="text-[9px] font-black uppercase opacity-60 mb-1 text-white">Estado Atual</p>
+                          <p className="text-sm font-bold truncate">{historicoDaPlanta.find(h => h.analise_ia).analise_ia.estado_saude}</p>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+                          <p className="text-[9px] font-black uppercase opacity-60 mb-1 text-white">Desenvolvimento</p>
+                          <p className="text-sm font-bold truncate">{historicoDaPlanta.find(h => h.analise_ia).analise_ia.desvio_desenvolvimento}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl text-purple-900 shadow-inner">
+                        <p className="text-[10px] font-black uppercase text-purple-400 mb-1">Ação Recomendada</p>
+                        <p className="text-xs font-medium leading-relaxed italic">
+                          "{historicoDaPlanta.find(h => h.analise_ia).analise_ia.acao_sugerida}"
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Timeline/Diário Individual */}
+                  <div className="bg-surface-container-low p-5 rounded-[2rem] border border-surface-container">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-sm text-on-surface flex items-center gap-2"><CameraIcon size={18}/> Evolução Visual</h3>
+                    </div>
                     <button onClick={() => setSheetView('foto_planta')} className="w-full py-3 bg-primary/10 text-primary rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-primary/20 transition mb-4">
                       <Camera size={16}/> Tirar Foto Individual (IA)
                     </button>
@@ -750,25 +983,73 @@ export default function TelaProdutorApp() {
                         <p className="text-[10px] text-secondary italic text-center py-4">Nenhum laudo ou foto para esta planta.</p>
                       ) : (
                         historicoDaPlanta.map((item: any) => (
-                          <div key={item.id} className="bg-surface-container-lowest border border-surface-container p-3 rounded-xl">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="text-[10px] font-bold text-primary uppercase">{new Date(item.data_execucao).toLocaleDateString('pt-BR')}</span>
-                              {item.analise_ia && <Sparkles size={12} className="text-purple-500" />}
+                          <div key={item.id} className="bg-surface-container-lowest border border-surface-container p-4 rounded-3xl shadow-sm">
+                            <div className="flex justify-between items-center mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className={`p-2 rounded-xl ${
+                                  item.tipo_tarefa === 'Abono' ? 'bg-amber-100 text-amber-700' : 
+                                  item.tipo_tarefa === 'Defensivo' ? 'bg-red-100 text-red-700' : 
+                                  item.tipo_tarefa === 'Laudo' ? 'bg-purple-100 text-purple-700' : 'bg-surface-container-high text-secondary'
+                                }`}>
+                                  {getIconTarefa(item.tipo_tarefa, 18)}
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-secondary">{item.tipo_tarefa?.replace('_', ' ')}</p>
+                                  <p className="text-xs font-bold text-on-surface">{new Date(item.data_execucao).toLocaleDateString('pt-BR')} {new Date(item.data_execucao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
+                                </div>
+                              </div>
+                              {item.analise_ia && <Sparkles size={14} className="text-purple-500 animate-pulse" />}
                             </div>
                             
                             {item.foto_url && (
-                              <img src={item.foto_url} alt="Evolução" className="w-full h-24 object-cover rounded-lg mb-2 border border-surface-container" />
+                              <div className="relative rounded-2xl overflow-hidden mb-3 border border-surface-container shadow-inner">
+                                <img src={item.foto_url} alt="Evolução" className="w-full h-40 object-cover" />
+                                {!item.analise_ia && item.tipo_tarefa === 'Laudo' && (
+                                  <button 
+                                    onClick={() => handleAnalisarIA(item)}
+                                    disabled={analisandoId === item.id}
+                                    className="absolute bottom-2 right-2 bg-purple-600 text-white text-[10px] font-bold px-4 py-2 rounded-xl shadow-lg flex items-center gap-1 hover:bg-purple-700 transition"
+                                  >
+                                    <Bot size={14}/> {analisandoId === item.id ? 'Analisando...' : 'Pedir Laudo IA'}
+                                  </button>
+                                )}
+                              </div>
                             )}
                             
-                            {item.observacao && <p className="text-[11px] text-on-surface mb-2">{item.observacao}</p>}
+                            {item.observacao && (
+                              <div className="bg-surface-container-low/50 p-3 rounded-2xl mb-2">
+                                <p className="text-xs text-on-surface leading-relaxed">{item.observacao}</p>
+                              </div>
+                            )}
                             
                             {item.analise_ia && (
-                              <div className="bg-purple-500/5 border border-purple-500/10 p-2 rounded-lg">
-                                <p className="text-[9px] font-black text-purple-600 uppercase flex items-center gap-1 mb-1"><Bot size={10}/> Laudo IA</p>
-                                <p className="text-[10px] text-purple-700 leading-tight">
-                                  <strong>Saúde:</strong> {item.analise_ia.estado_saude}<br/>
-                                  <strong>Ação:</strong> {item.analise_ia.acao_sugerida}
-                                </p>
+                              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 p-4 rounded-2xl shadow-sm">
+                                <div className="flex items-center gap-2 mb-3 text-purple-700 font-black text-[10px] uppercase tracking-tighter"><Bot size={16}/> Resultado da Análise IA</div>
+                                <div className="space-y-2 text-[12px] leading-snug">
+                                  {item.analise_ia.desvio_desenvolvimento && (
+                                    <div className="flex justify-between border-b border-purple-100 pb-1">
+                                      <span className="text-purple-400 font-bold uppercase text-[9px]">Desenvolvimento</span>
+                                      <span className="font-bold text-purple-900 text-right">{item.analise_ia.desvio_desenvolvimento}</span>
+                                    </div>
+                                  )}
+                                  {item.analise_ia.estado_saude && (
+                                    <div className="flex justify-between border-b border-purple-100 pb-1">
+                                      <span className="text-purple-400 font-bold uppercase text-[9px]">Saúde</span>
+                                      <span className={`font-bold ${item.analise_ia.estado_saude.includes('Saudável') ? 'text-green-600' : 'text-error'} text-right`}>{item.analise_ia.estado_saude}</span>
+                                    </div>
+                                  )}
+                                  {item.analise_ia.doenca_detectada && item.analise_ia.doenca_detectada !== 'Nenhuma' && (
+                                    <div className="flex justify-between border-b border-purple-100 pb-1">
+                                      <span className="text-purple-400 font-bold uppercase text-[9px]">Doença</span>
+                                      <span className="font-bold text-error text-right">{item.analise_ia.doenca_detectada}</span>
+                                    </div>
+                                  )}
+                                  {item.analise_ia.acao_sugerida && (
+                                    <div className="mt-3 text-purple-900 font-medium bg-white p-3 rounded-xl border border-purple-100 shadow-inner italic">
+                                      💡 {item.analise_ia.acao_sugerida}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -778,30 +1059,44 @@ export default function TelaProdutorApp() {
                   </div>
 
                   {/* Ações Individuais */}
-                  {plantaAtiva.status === 'Semente' && (
-                    <button onClick={async () => {
-                      await supabase.from('plantas').update({ status: 'Germinada', data_germinacao: new Date().toISOString() }).eq('id', plantaAtiva.id);
-                      setPlantaAtiva({...plantaAtiva, status: 'Germinada'});
-                      carregarPlantasDoLote(loteAtivoId.id);
-                      alert('Planta marcada como germinada!');
-                    }} className="w-full p-4 rounded-2xl bg-primary text-on-primary font-bold flex items-center justify-between shadow-md">
-                      <span className="flex items-center gap-2"><Sprout size={18}/> Reportar Germinação</span>
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button onClick={() => handleTarefaIndividual('Abono')} disabled={uploading} className="p-4 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 text-amber-700 font-bold flex flex-col items-center gap-2 shadow-sm active:scale-95 transition disabled:opacity-50">
+                      <Sprout size={24}/>
+                      <span className="text-[10px] uppercase tracking-tighter">Adicionar Abono</span>
                     </button>
-                  )}
+                    <button onClick={() => handleTarefaIndividual('Veneno')} disabled={uploading} className="p-4 rounded-[2rem] bg-red-500/10 border border-red-500/20 text-red-700 font-bold flex flex-col items-center gap-2 shadow-sm active:scale-95 transition disabled:opacity-50">
+                      <ShieldAlert size={24}/>
+                      <span className="text-[10px] uppercase tracking-tighter">Aplicar Veneno</span>
+                    </button>
+                  </div>
 
-                  <button onClick={async () => {
-                     if(!confirm('Declarar perda desta planta individual?')) return;
-                     await supabase.from('plantas').update({ status: 'Morta' }).eq('id', plantaAtiva.id);
-                     await supabase.from('lotes_plantio').update({ 
-                        quantidade_plantada: Math.max(0, (loteAtivoId.quantidade_plantada || 1) - 1),
-                        quantidade_morta: (loteAtivoId.quantidade_morta || 0) + 1
-                     }).eq('id', loteAtivoId.id);
-                     setPlantaAtiva({...plantaAtiva, status: 'Morta'});
-                     carregarPlantasDoLote(loteAtivoId.id);
-                     alert('Planta reportada como morta/quebrada.');
-                  }} className="w-full p-4 rounded-2xl bg-error/10 text-error font-bold flex items-center gap-2 border border-error/20">
-                    <Skull size={18}/> Quebra / Mortalidade
-                  </button>
+                  <div className="pt-2 space-y-3">
+                    {plantaAtiva.status === 'Semente' && (
+                      <button onClick={async () => {
+                        await supabase.from('plantas').update({ status: 'Germinada', data_germinacao: new Date().toISOString() }).eq('id', plantaAtiva.id);
+                        setPlantaAtiva({...plantaAtiva, status: 'Germinada'});
+                        carregarPlantasDoLote(loteAtivoId.id);
+                        alert('Planta marcada como germinada!');
+                      }} className="w-full p-4 rounded-2xl bg-primary text-on-primary font-bold flex items-center justify-between shadow-md">
+                        <span className="flex items-center gap-2"><Sprout size={18}/> Reportar Germinação</span>
+                      </button>
+                    )}
+
+                    <button onClick={async () => {
+                       if(!confirm('Declarar perda desta planta individual?')) return;
+                       await supabase.from('plantas').update({ status: 'Morta' }).eq('id', plantaAtiva.id);
+                       await supabase.from('lotes_plantio').update({ 
+                          quantidade_plantada: Math.max(0, (loteAtivoId.quantidade_plantada || 1) - 1),
+                          quantidade_morta: (loteAtivoId.quantidade_morta || 0) + 1
+                       }).eq('id', loteAtivoId.id);
+                       alert('Óbito registrado.');
+                       setSheetView('plantas_lista');
+                       carregarPlantasDoLote(loteAtivoId.id);
+                       carregarTudo();
+                    }} className="w-full p-4 rounded-2xl bg-error/10 text-error font-bold flex items-center justify-between border border-error/20">
+                      <span className="flex items-center gap-2"><Skull size={18}/> Quebra / Mortalidade</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -823,35 +1118,54 @@ export default function TelaProdutorApp() {
                 </div>
 
                 <button onClick={() => {
-                  const svgEl = document.getElementById('qr-container')?.innerHTML;
-                  if (svgEl) {
+                  const printContent = document.getElementById('qr-container')?.innerHTML;
+                  if (printContent) {
                     const printWindow = window.open('', '_blank');
                     if (printWindow) {
                       printWindow.document.write(`
                         <html>
                           <head>
-                            <title>Print QR</title>
+                            <title>Impressão de QR Code - ${plantaAtiva.identificador_individual}</title>
                             <style>
-                              body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
+                              body { 
+                                display: flex; 
+                                flex-direction: column; 
+                                align-items: center; 
+                                justify-content: center; 
+                                min-height: 100vh; 
+                                margin: 0; 
+                                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                              }
+                              .print-container {
+                                text-align: center;
+                                padding: 20px;
+                                border: 1px solid #eee;
+                              }
+                              h2 { margin-bottom: 5px; font-size: 24px; }
+                              p { margin-top: 5px; color: #666; font-size: 12px; }
+                              svg { width: 250px !important; height: 250px !important; }
+                              @media print {
+                                border: none;
+                              }
                             </style>
                           </head>
                           <body>
-                            <div style="text-align: center;">
-                              ${svgEl}
+                            <div class="print-container">
+                              ${printContent}
                             </div>
                             <script>
-                              setTimeout(() => {
-                                window.print();
-                                window.close();
-                              }, 250);
+                              window.onload = function() {
+                                setTimeout(() => {
+                                  window.print();
+                                  window.close();
+                                }, 500);
+                              };
                             </script>
                           </body>
                         </html>
                       `);
                       printWindow.document.close();
                     }
-                  } else {
-                    window.print();
                   }
                 }} className="w-full bg-primary text-on-primary py-4 rounded-xl font-bold text-lg shadow-md hover:scale-[1.02] transition print:hidden flex items-center justify-center gap-2">
                   <QrCode size={20}/> Imprimir Etiqueta
@@ -1099,6 +1413,8 @@ export default function TelaProdutorApp() {
           </div>
         </div>
       )}
+
+      {analisandoId && <LoadingOverlayIA />}
     </main>
   );
 }

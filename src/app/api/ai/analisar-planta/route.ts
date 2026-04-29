@@ -40,11 +40,24 @@ export async function POST(req: Request) {
       keys,
       prompt,
       imageBase64,
+      imageUrl: fotoUrl, // Groq e OpenAI podem usar a URL diretamente
       mimeType,
       language: config.idioma || 'pt'
     });
 
-    return NextResponse.json({ success: true, analise: JSON.parse(responseText || '{}') });
+    // 4. Tratar Resposta
+    let analise = {};
+    try {
+      // Tenta limpar markdown se a IA retornar
+      const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      analise = JSON.parse(cleanedText);
+    } catch (e) {
+      console.error('Erro ao parsear JSON da IA:', e, responseText);
+      // Fallback: se não for JSON, coloca o texto bruto em algum campo
+      analise = { acao_sugerida: responseText };
+    }
+
+    return NextResponse.json({ success: true, analise });
   } catch (error: any) {
     console.error('Erro na análise IA:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

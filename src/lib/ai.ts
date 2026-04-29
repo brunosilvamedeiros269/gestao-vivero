@@ -3,11 +3,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 /**
  * Utilitário centralizado para chamadas de IA Multimodelo
  */
-export async function chamarIA({ provider, keys, prompt, imageBase64, mimeType, language = 'es' }: { 
+export async function chamarIA({ provider, keys, prompt, imageBase64, imageUrl, mimeType, language = 'es' }: { 
   provider: 'gemini' | 'openai' | 'groq', 
   keys: any, 
   prompt: string,
   imageBase64?: string,
+  imageUrl?: string,
   mimeType?: string,
   language?: string
 }) {
@@ -32,23 +33,24 @@ export async function chamarIA({ provider, keys, prompt, imageBase64, mimeType, 
   }
 
   if (provider === 'openai') {
+    const finalImageUrl = imageUrl || (imageBase64 ? `data:${mimeType};base64,${imageBase64}` : null);
     const messages: any[] = [
       { role: "system", content: "Você é um agrônomo especialista." },
-      { role: "user", content: imageBase64 ? [
+      { role: "user", content: finalImageUrl ? [
           { type: "text", text: prompt },
-          { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
+          { type: "image_url", image_url: { url: finalImageUrl } }
         ] : prompt 
       }
     ];
 
-    const res = await fetch('https://api.openai.com/v1/chat/completations', {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${keys.openai_api_key}`
       },
       body: JSON.stringify({
-        model: imageBase64 ? "gpt-4o" : "gpt-4o-mini",
+        model: finalImageUrl ? "gpt-4o" : "gpt-4o-mini",
         messages,
         response_format: { type: "json_object" }
       })
@@ -60,11 +62,12 @@ export async function chamarIA({ provider, keys, prompt, imageBase64, mimeType, 
   }
 
   if (provider === 'groq') {
+    const finalImageUrl = imageUrl || (imageBase64 ? `data:${mimeType};base64,${imageBase64}` : null);
     const messages: any[] = [
       { role: "system", content: "Você é um agrônomo especialista. Responda apenas com o JSON solicitado." },
-      { role: "user", content: imageBase64 ? [
+      { role: "user", content: finalImageUrl ? [
           { type: "text", text: prompt },
-          { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
+          { type: "image_url", image_url: { url: finalImageUrl } }
         ] : prompt 
       }
     ];
@@ -76,7 +79,7 @@ export async function chamarIA({ provider, keys, prompt, imageBase64, mimeType, 
         'Authorization': `Bearer ${keys.groq_api_key}`
       },
       body: JSON.stringify({
-        model: imageBase64 ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile",
+        model: finalImageUrl ? "meta-llama/llama-4-scout-17b-16e-instruct" : "llama-3.3-70b-versatile",
         messages,
         response_format: { type: "json_object" }
       })
