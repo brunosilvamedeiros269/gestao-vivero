@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Tag, ShoppingCart, Info, CheckCircle2, History, AlertTriangle, QrCode, Sparkles } from 'lucide-react';
 import QRCode from 'react-qr-code';
+import Barcode from 'react-barcode';
 import Image from 'next/image';
 
 export default function GerenciadorLotePage({ params }: { params: Promise<{ id: string }> }) {
@@ -320,19 +321,38 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
                </div>
             </div>
 
-            {/* Identificação e QR Code */}
+            {/* Identificação e QR Code / Barcode */}
             <div className="bg-surface-container-lowest border border-surface-container-highest p-6 rounded-2xl shadow-sm text-center">
-               <h2 className="text-sm font-bold text-secondary uppercase tracking-wider mb-4 flex items-center justify-center gap-2"><QrCode size={16}/> Etiqueta QR da Bancada</h2>
+               <h2 className="text-sm font-bold text-secondary uppercase tracking-wider mb-4 flex items-center justify-center gap-2"><QrCode size={16}/> Etiqueta de Identificação</h2>
                <div className="bg-white p-4 inline-block rounded-xl mx-auto mb-3 shadow-sm border border-gray-200">
-                 <QRCode 
-                   value={lote.id} 
-                   size={150}
-                   level="H"
-                   fgColor="#000000"
-                   bgColor="#FFFFFF"
-                 />
+                 <div className="mb-4">
+                   <p className="text-[10px] font-bold text-secondary uppercase mb-2">QR Code (Bancada/Gestão)</p>
+                   <QRCode 
+                     value={lote.id} 
+                     size={150}
+                     level="H"
+                     fgColor="#000000"
+                     bgColor="#FFFFFF"
+                     className="mx-auto"
+                   />
+                 </div>
+                 
+                 {lote.sku && (
+                   <div className="pt-4 border-t border-gray-200">
+                     <p className="text-[10px] font-bold text-secondary uppercase mb-2">Código de Barras (Produto/Venda)</p>
+                     <Barcode 
+                        value={lote.sku} 
+                        width={1.5} 
+                        height={50} 
+                        fontSize={12}
+                        margin={0}
+                        background="#FFFFFF"
+                        lineColor="#000000"
+                     />
+                   </div>
+                 )}
                </div>
-               <p className="text-xs text-secondary mb-3 px-2">Fixe esta etiqueta na estufa física. O trabalhador irá escaneá-la pelo App para gerir a planta.</p>
+               <p className="text-xs text-secondary mb-3 px-2">Fixe esta etiqueta. Use o QR para gestão interna e o Código de Barras para vendas.</p>
                <button onClick={() => window.print()} className="w-full bg-surface-container-high text-on-surface font-bold py-2 rounded-xl hover:bg-surface-container-highest transition border border-surface-container">
                  Imprimir Etiqueta
                </button>

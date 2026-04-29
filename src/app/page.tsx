@@ -102,9 +102,19 @@ export default function TelaProdutorApp() {
       .order('data_plantio', { ascending: false });
     if (L) setLotes(L);
 
-    // 2. Espécies para form
+    // 2. Espécies para form (Apenas as que possuem sementes em estoque)
+    const { data: sementesEstoque } = await supabase
+      .from('compras_insumos')
+      .select('especie_id')
+      .not('especie_id', 'is', null)
+      .gt('quantidade_restante', 0);
+      
+    const especiesComSemente = new Set(sementesEstoque?.map(s => s.especie_id) || []);
+
     const { data: E } = await supabase.from('especies').select('id, nome').order('nome');
-    if (E) setEspecies(E);
+    if (E) {
+      setEspecies(E.filter(e => especiesComSemente.has(e.id)));
+    }
 
     // 3. Vasos (Itens com volume_vazao detectado)
     const { data: V } = await supabase.from('compras_insumos').select('*').gt('capacidade_substrato_vazao', 0).gt('quantidade_restante', 0);
@@ -254,13 +264,19 @@ export default function TelaProdutorApp() {
     if (!novoLoteIdf || !novoLoteEspecie) return;
 
     try {
+      const selectedEspecie = especies.find(e => e.id === novoLoteEspecie);
+      const prefixoEspecie = selectedEspecie ? selectedEspecie.nome.substring(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, '') : 'PLT';
+      const hashCurto = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const skuGerado = `${prefixoEspecie}-${novoLoteIdf.toUpperCase().replace(/[^A-Z0-9]/g, '')}-${hashCurto}`;
+
       const { data: nLote, error } = await supabase.from('lotes_plantio').insert({
         identificacao_lote: novoLoteIdf,
         especie_id: novoLoteEspecie,
         quantidade_plantada: isIndividual ? 1 : 0,
         status: isIndividual ? 'em_crescimento' : 'germinando',
         data_plantio: new Date().toISOString().split('T')[0],
-        tipo_gestao: isIndividual ? 'individual' : 'lote'
+        tipo_gestao: isIndividual ? 'individual' : 'lote',
+        sku: skuGerado
       }).select().single();
       
       if (error) throw error;

@@ -151,7 +151,7 @@ export default function NovaCompraPage() {
 
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Categoria</label>
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Categoria <span className="text-error">*</span></label>
                   <select required name="categoria_id" value={form.categoria_id} onChange={handleChange} className="w-full bg-white border-2 border-surface-container rounded-2xl px-5 py-3 outline-none font-bold">
                     <option value="">Selecione...</option>
                     {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -160,7 +160,7 @@ export default function NovaCompraPage() {
 
                 {isSemente && (
                   <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
-                    <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Espécie Associada</label>
+                    <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Espécie Associada <span className="text-error">*</span></label>
                     <select required name="especie_id" value={form.especie_id} onChange={handleChange} className="w-full bg-primary/5 border-2 border-primary/30 text-primary rounded-2xl px-5 py-3 outline-none font-black shadow-sm">
                       <option value="">Selecione a Espécie...</option>
                       {especies.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
@@ -199,7 +199,7 @@ export default function NovaCompraPage() {
                 )}
 
                 <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
-                  <label className="text-[9px] font-black text-primary uppercase tracking-widest">Resultado do Volume (L/Kg)</label>
+                  <label className="text-[9px] font-black text-primary uppercase tracking-widest">Resultado do Volume (L/Kg) <span className="text-error">*</span></label>
                   <input required type="number" step="0.001" readOnly={modoCalcVaso === 'dimensoes'} name="capacidade_substrato_vazao" value={form.capacidade_substrato_vazao} onChange={handleChange} className={`w-full bg-transparent text-xl font-black text-primary outline-none mt-1 ${modoCalcVaso === 'dimensoes' ? 'opacity-70' : ''}`} placeholder="0.000" />
                 </div>
               </div>
@@ -215,7 +215,7 @@ export default function NovaCompraPage() {
             
             <div className="bg-surface-container-low p-6 rounded-[2rem] border border-surface-container shadow-sm space-y-5">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Fornecedor</label>
+                <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Fornecedor <span className="text-error">*</span></label>
                 <select required name="fornecedor_id" value={form.fornecedor_id} onChange={handleChange} className="w-full bg-white border-2 border-surface-container rounded-2xl px-5 py-3 outline-none font-bold">
                   <option value="">Selecione...</option>
                   {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome_fantasia}</option>)}
@@ -224,7 +224,7 @@ export default function NovaCompraPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Data</label>
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Data <span className="text-error">*</span></label>
                   <input required type="date" name="data_compra" value={form.data_compra} onChange={handleChange} className="w-full bg-white border-2 border-surface-container rounded-2xl px-5 py-3 outline-none font-bold" />
                 </div>
                 <div className="space-y-1.5 text-right">
@@ -239,13 +239,13 @@ export default function NovaCompraPage() {
 
               <div className="pt-4 border-t border-surface-container grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Quantidade</label>
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Quantidade <span className="text-error">*</span></label>
                   <div className="flex items-center bg-white border-2 border-surface-container rounded-2xl px-5 py-3">
                     <input required type="number" step="0.0001" name="quantidade_comprada" value={form.quantidade_comprada} onChange={handleChange} placeholder="0.0" className="w-full outline-none font-black" />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Unidade</label>
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Unidade <span className="text-error">*</span></label>
                   <select required name="unidade_medida" value={form.unidade_medida} onChange={handleChange} className="w-full bg-white border-2 border-surface-container rounded-2xl px-4 py-3 outline-none font-bold text-xs">
                     <option value="Gramas">Gramas</option>
                     <option value="Kg">Kg</option>

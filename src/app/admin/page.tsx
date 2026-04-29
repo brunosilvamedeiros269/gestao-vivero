@@ -172,7 +172,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="pt-3 border-t border-surface-container flex justify-between items-center">
                         <span className="text-xs font-medium text-secondary">Custo Rateado:</span>
-                        <span className="text-sm font-bold text-amber-500">{formatCOP(l.custo_acumulado)}</span>
+                        <span className="text-sm font-bold text-amber-500">{formatCOP(l.custo_acumulado || 0)}</span>
                       </div>
                     </div>
                   ))}
@@ -209,11 +209,11 @@ export default function AdminDashboard() {
                       <div className="bg-surface-container-lowest rounded-xl p-3 mt-3 mb-4 grid grid-cols-2 gap-2 border border-surface-container-highest">
                         <div>
                           <p className="text-[10px] uppercase text-secondary font-bold tracking-wider mb-1">Custo Total</p>
-                          <p className="font-medium text-error">{formatCOP(l.custo_acumulado)}</p>
+                          <p className="font-medium text-error">{formatCOP(l.custo_acumulado || 0)}</p>
                         </div>
                         <div className="border-l border-surface-container pl-2">
                           <p className="text-[10px] uppercase text-secondary font-bold tracking-wider mb-1">Preço Venda (Alvo)</p>
-                          <p className="font-bold text-primary">{formatCOP(l.preco_venda_estimado)}</p>
+                          <p className="font-bold text-primary">{formatCOP(l.preco_venda_estimado || 0)}</p>
                         </div>
                       </div>
 

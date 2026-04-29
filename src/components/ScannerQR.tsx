@@ -19,7 +19,14 @@ export default function ScannerQR({ onScan, onClose }: ScannerQRProps) {
       { 
         fps: 10, 
         qrbox: { width: 250, height: 250 },
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E
+        ]
       },
       false
     );
@@ -54,13 +61,13 @@ export default function ScannerQR({ onScan, onClose }: ScannerQRProps) {
       </div>
       
       <div className="w-full max-w-sm px-4">
-        <h2 className="text-white text-center text-xl font-bold mb-6">Escaneie o QR da Bancada</h2>
+        <h2 className="text-white text-center text-xl font-bold mb-6">Escaneie o Código</h2>
         
         {/* Container do Scanner - A div id="reader" é obrigatória para o html5-qrcode */}
         <div id="reader" className="w-full rounded-2xl overflow-hidden bg-black border-4 border-primary"></div>
         
         <p className="text-white/60 text-center text-sm mt-6 px-4">
-          Aponte a câmera para a etiqueta colada na estufa para acessar o lote instantaneamente.
+          Aponte a câmera para o QR Code ou Código de Barras da etiqueta para acessar o item instantaneamente.
         </p>
       </div>
     </div>
