@@ -4,10 +4,14 @@ import { supabase } from '@/lib/supabase';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { lote, preco, plataforma } = body;
+    const { lote, preco, plataforma, foto_url, titulo_editado, descricao_editada, garantia, luz, altura, vaso, video_id } = body;
 
     if (plataforma !== 'mercadolivre') {
       return NextResponse.json({ error: 'Endpoint exclusivo para Mercado Livre' }, { status: 400 });
+    }
+
+    if (!foto_url) {
+      return NextResponse.json({ error: 'É obrigatório ter ao menos uma foto cadastrada no lote para publicar no Mercado Livre.' }, { status: 400 });
     }
 
     // 1. Obter token de acesso do ML das configuracoes
@@ -23,11 +27,18 @@ export async function POST(req: Request) {
     const accessToken = config.api_keys.ml_access_token;
 
     // 2. Construir o JSON de Produto para o Mercado Livre
-    // Estamos usando uma categoria genérica de plantas na Colômbia: MCO1284 (Jardines y Exteriores > Plantas)
-    // O título deve ter no máximo 60 caracteres
-    const titulo = `Planta ${lote.especie?.nome} - Lote ${lote.identificacao_lote}`.substring(0, 60);
+    const titulo = (titulo_editado || `Planta ${lote.especie?.nome} - Lote ${lote.identificacao_lote}`).substring(0, 60);
+    const descricao = descricao_editada || `Venda de lote de plantas.\n\nEspécie: ${lote.especie?.nome}\nLote ID: ${lote.identificacao_lote}\nCultivo registrado e monitorado pelo sistema de gestão de viveiros.`;
 
-    const mlPayload = {
+    const attributes = [
+      { id: "SPECIES_NAME", value_name: lote.especie?.nome || "Planta Mista" },
+      { id: "PLANT_TYPE", value_name: "Planta Decorativa" }
+    ];
+
+    if (altura) attributes.push({ id: "HEIGHT", value_name: altura });
+    if (luz) attributes.push({ id: "LIGHT_REQUIREMENTS", value_name: luz }); // Note: valid ID depends on ML category, sending as generic attribute if valid
+
+    const mlPayload: any = {
       title: titulo,
       category_id: "MCO441826", 
       price: preco,
@@ -37,18 +48,25 @@ export async function POST(req: Request) {
       condition: "new",
       listing_type_id: "gold_special",
       description: {
-        plain_text: `Venda de lote de plantas.\n\nEspécie: ${lote.especie?.nome}\nLote ID: ${lote.identificacao_lote}\nCultivo registrado e monitorado pelo sistema de gestão de viveiros.`
+        plain_text: descricao
       },
-      attributes: [
-        { id: "SPECIES_NAME", value_name: lote.especie?.nome || "Planta Mista" },
-        { id: "PLANT_TYPE", value_name: "Planta Decorativa" }
-      ],
+      attributes: attributes,
       pictures: [
-        {
-          source: "https://images.unsplash.com/photo-1416879598555-56fa2b8c56cc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-        }
+        { source: foto_url }
       ]
     };
+
+    if (garantia) {
+      mlPayload.warranty = "Garantia do vendedor";
+      mlPayload.sale_terms = [
+        { id: "WARRANTY_TYPE", value_name: "Garantia del vendedor" },
+        { id: "WARRANTY_TIME", value_name: garantia }
+      ];
+    }
+
+    if (video_id) {
+      mlPayload.video_id = video_id;
+    }
 
     // 3. Fazer POST para o Mercado Livre API
     const response = await fetch('https://api.mercadolibre.com/items', {

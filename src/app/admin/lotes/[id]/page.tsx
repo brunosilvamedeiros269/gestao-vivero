@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Tag, ShoppingCart, Info, CheckCircle2, History, AlertTriangle, QrCode } from 'lucide-react';
+import { ArrowLeft, Tag, ShoppingCart, Info, CheckCircle2, History, AlertTriangle, QrCode, Sparkles } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import Image from 'next/image';
 
@@ -25,6 +25,15 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
   const [plataformaAlvo, setPlataformaAlvo] = useState('');
   const [precoVenda, setPrecoVenda] = useState('');
   const [salvando, setSalvando] = useState(false);
+
+  // Anúncio IA e Atributos ML
+  const [tituloAnuncio, setTituloAnuncio] = useState('');
+  const [descricaoAnuncio, setDescricaoAnuncio] = useState('');
+  const [alturaPlanta, setAlturaPlanta] = useState('');
+  const [luzPlanta, setLuzPlanta] = useState('');
+  const [garantiaAnuncio, setGarantiaAnuncio] = useState('');
+  const [videoAnuncio, setVideoAnuncio] = useState('');
+  const [gerandoIA, setGerandoIA] = useState(false);
 
   // B2B State
   const [modalB2B, setModalB2B] = useState(false);
@@ -103,8 +112,35 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
   const formatCOP = (val: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
 
   const abrirModalPublicacao = (platId: string) => {
+    if (platId === 'mercadolivre' && fotosEvolucao.length === 0) {
+      alert("É obrigatório ter ao menos uma foto registrada na evolução do lote para publicar no Mercado Livre.");
+      return;
+    }
     setPlataformaAlvo(platId);
+    setTituloAnuncio(`Planta ${lote.especie?.nome} - Lote ${lote.identificacao_lote}`.substring(0, 60));
+    setDescricaoAnuncio(`Venda de lote de plantas.\n\nEspécie: ${lote.especie?.nome}\nLote ID: ${lote.identificacao_lote}\nCultivo registrado e monitorado pelo sistema de gestão de viveiros.`);
     setModalAberto(true);
+  };
+
+  const handleGerarAnuncioIA = async () => {
+    setGerandoIA(true);
+    try {
+      const res = await fetch('/api/ai/gerar-anuncio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          especie: lote.especie?.nome,
+          detalhes: `Características: altura ${alturaPlanta}, luz ${luzPlanta}`
+        })
+      });
+      const data = await res.json();
+      if(data.titulo_viral) setTituloAnuncio(data.titulo_viral);
+      if(data.descricao_comercial) setDescricaoAnuncio(data.descricao_comercial);
+    } catch (e) {
+      alert("Erro ao gerar com IA.");
+    } finally {
+      setGerandoIA(false);
+    }
   };
 
   const handlePublicar = async () => {
@@ -120,10 +156,22 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
       let idExternoFinal = `MOCK-${Math.floor(Math.random()*10000)}`;
 
       if (plataformaAlvo === 'mercadolivre') {
+        const fotoRealUrl = fotosEvolucao.length > 0 ? fotosEvolucao[0].foto_url : null;
         const res = await fetch('/api/integracoes/mercadolivre/publish', { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lote, preco: parseFloat(precoVenda), plataforma: 'mercadolivre' }) 
+          body: JSON.stringify({ 
+            lote, 
+            preco: parseFloat(precoVenda), 
+            plataforma: 'mercadolivre',
+            foto_url: fotoRealUrl,
+            titulo_editado: tituloAnuncio,
+            descricao_editada: descricaoAnuncio,
+            garantia: garantiaAnuncio,
+            luz: luzPlanta,
+            altura: alturaPlanta,
+            video_id: videoAnuncio
+          }) 
         });
         
         const data = await res.json();
@@ -460,7 +508,54 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
               <p className="text-xs text-secondary mt-1">Revise o valor antes de confirmar o anúncio.</p>
             </div>
             
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              
+              {plataformaAlvo === 'mercadolivre' && (
+                <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-4 mb-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-bold text-primary flex items-center gap-2"><Sparkles size={16}/> Otimização com IA</h4>
+                    <button 
+                      onClick={handleGerarAnuncioIA} 
+                      disabled={gerandoIA}
+                      className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {gerandoIA ? 'Gerando...' : 'Gerar Texto Comercial'}
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-secondary mb-1">Título do Anúncio (Max 60 char)</label>
+                    <input type="text" maxLength={60} value={tituloAnuncio} onChange={e => setTituloAnuncio(e.target.value)} className="w-full bg-surface border border-surface-container text-on-surface rounded-lg px-3 py-2 text-sm outline-none focus:border-primary" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-secondary mb-1">Descrição Comercial</label>
+                    <textarea rows={4} value={descricaoAnuncio} onChange={e => setDescricaoAnuncio(e.target.value)} className="w-full bg-surface border border-surface-container text-on-surface rounded-lg px-3 py-2 text-sm outline-none focus:border-primary" />
+                  </div>
+
+                  <div className="pt-2 border-t border-primary/10">
+                     <p className="text-xs font-bold text-secondary mb-2">Atributos Opcionais</p>
+                     <div className="grid grid-cols-2 gap-3">
+                       <div>
+                         <label className="block text-[10px] text-secondary">Altura (ex: 30cm)</label>
+                         <input type="text" value={alturaPlanta} onChange={e => setAlturaPlanta(e.target.value)} className="w-full bg-surface border border-surface-container text-on-surface rounded-md px-2 py-1 text-xs outline-none focus:border-primary" />
+                       </div>
+                       <div>
+                         <label className="block text-[10px] text-secondary">Luz (ex: Sol Pleno)</label>
+                         <input type="text" value={luzPlanta} onChange={e => setLuzPlanta(e.target.value)} className="w-full bg-surface border border-surface-container text-on-surface rounded-md px-2 py-1 text-xs outline-none focus:border-primary" />
+                       </div>
+                       <div>
+                         <label className="block text-[10px] text-secondary">Garantia (ex: 30 días)</label>
+                         <input type="text" value={garantiaAnuncio} onChange={e => setGarantiaAnuncio(e.target.value)} className="w-full bg-surface border border-surface-container text-on-surface rounded-md px-2 py-1 text-xs outline-none focus:border-primary" />
+                       </div>
+                       <div>
+                         <label className="block text-[10px] text-secondary">ID Vídeo YouTube</label>
+                         <input type="text" value={videoAnuncio} onChange={e => setVideoAnuncio(e.target.value)} placeholder="Ex: dQw4w9WgXcQ" className="w-full bg-surface border border-surface-container text-on-surface rounded-md px-2 py-1 text-xs outline-none focus:border-primary" />
+                       </div>
+                     </div>
+                  </div>
+                </div>
+              )}
               
               <div className="bg-error/10 border border-error/20 rounded-xl p-4 flex justify-between items-center">
                 <span className="text-sm font-bold text-error flex items-center gap-2"><AlertTriangle size={16}/> Custo Unitário:</span>
