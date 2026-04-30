@@ -171,7 +171,6 @@ export default function PDVPage() {
 
       // 2. Criar os Itens e Abater Estoque
       for (const item of carrinho) {
-        // Gravar item normalizado
         await supabase.from('itens_pedido').insert([{
           pedido_id: pedido.id,
           lote_id: item.id,
@@ -179,7 +178,6 @@ export default function PDVPage() {
           preco_unitario: item.preco_unitario
         }]);
 
-        // Abater estoque via RPC
         const { error: errorRPC } = await supabase.rpc('abater_estoque_lote', { 
           lote_id_param: item.id, 
           qtd_param: item.quantidade 
@@ -187,7 +185,10 @@ export default function PDVPage() {
         if (errorRPC) console.error('Erro RPC Abate:', errorRPC);
       }
 
-      setPedidoFinalizado(pedido);
+      setPedidoFinalizado({
+        ...pedido,
+        itens: carrinho // Guardar itens para o recibo
+      });
       setShowCheckout(false);
       setShowReceipt(true);
       setCarrinho([]);
@@ -521,6 +522,79 @@ export default function PDVPage() {
           }}
           onClose={() => setShowScanner(false)}
         />
+      )}
+
+      {/* Estilos de Impressão */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #print-receipt, #print-receipt * {
+            visibility: visible;
+          }
+          #print-receipt {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 80mm; /* Largura padrão de impressora térmica */
+            padding: 5mm;
+            background: white;
+            color: black;
+            font-family: 'Courier New', Courier, monospace;
+          }
+          @page {
+            margin: 0;
+          }
+        }
+      `}</style>
+
+      {/* Estrutura do Recibo para Impressão */}
+      {pedidoFinalizado && (
+        <div id="print-receipt" className="hidden print:block text-black">
+          <div className="text-center border-b border-dashed border-gray-400 pb-4 mb-4">
+            <h1 className="text-lg font-black uppercase">{config?.nome_viveiro || 'VIVERO COLOMBIA'}</h1>
+            <p className="text-[10px]">Punto de Venta Directo</p>
+            <p className="text-[10px] mt-1">{new Date().toLocaleString('es-CO')}</p>
+          </div>
+
+          <div className="text-[10px] mb-4">
+            <p><strong>PEDIDO:</strong> #{pedidoFinalizado.id.slice(0, 8).toUpperCase()}</p>
+            <p><strong>CLIENTE:</strong> {pedidoFinalizado.cliente?.nome || 'Consumidor Final'}</p>
+            <p><strong>PAGO EN:</strong> {pedidoFinalizado.metodo_pagamento?.toUpperCase()}</p>
+          </div>
+
+          <table className="w-full text-[10px] mb-4">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-1">ITEM</th>
+                <th className="text-center py-1">QTD</th>
+                <th className="text-right py-1">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pedidoFinalizado.itens?.map((item: any, idx: number) => (
+                <tr key={idx} className="border-b border-gray-100 border-dotted">
+                  <td className="py-1">{item.especie?.nome || 'Planta'}</td>
+                  <td className="text-center py-1">{item.quantidade}</td>
+                  <td className="text-right py-1">{formatCOP(item.preco_unitario * item.quantidade)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="border-t border-dashed border-gray-400 pt-2 space-y-1">
+            <div className="flex justify-between text-xs font-black">
+              <span>TOTAL</span>
+              <span>{formatCOP(pedidoFinalizado.valor_total)}</span>
+            </div>
+          </div>
+
+          <div className="text-center mt-8 pt-4 border-t border-dotted border-gray-300">
+            <p className="text-[9px] italic">¡Gracias por su compra!</p>
+            <p className="text-[8px] mt-1">Visítenos pronto</p>
+          </div>
+        </div>
       )}
 
     </div>
