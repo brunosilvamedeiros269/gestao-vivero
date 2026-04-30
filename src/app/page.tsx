@@ -894,30 +894,34 @@ export default function TelaProdutorApp() {
 
       </div>
 
-      {/* FABs */}
-      <div className="fixed bottom-6 left-6 z-40 flex items-center gap-4">
-        <button 
-          onClick={() => setAbaAtiva('vendas')}
-          className="w-16 h-16 bg-[#064E3B] text-white rounded-full shadow-2xl flex justify-center items-center hover:scale-110 active:scale-95 transition-all"
-        >
-          <ShoppingCart size={28} />
-        </button>
-        <button 
-          onClick={() => setIsScanning(true)}
-          className="w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-2xl border border-surface-container flex justify-center items-center hover:scale-105 transition"
-        >
-          <QrCode size={28} />
-        </button>
-      </div>
+      {/* FABs - Apenas se não estiver no PDV */}
+      {abaAtiva !== 'vendas' && (
+        <div className="fixed bottom-6 left-6 z-40 flex items-center gap-4">
+          <button 
+            onClick={() => setAbaAtiva('vendas')}
+            className="w-16 h-16 bg-[#064E3B] text-white rounded-full shadow-2xl flex justify-center items-center hover:scale-110 active:scale-95 transition-all"
+          >
+            <ShoppingCart size={28} />
+          </button>
+          <button 
+            onClick={() => setIsScanning(true)}
+            className="w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-2xl border border-surface-container flex justify-center items-center hover:scale-105 transition"
+          >
+            <QrCode size={28} />
+          </button>
+        </div>
+      )}
 
-      <div className="fixed bottom-6 right-6 z-40">
-        <button 
-          onClick={() => { setLoteAtivoId(true); setSheetView('novo_lote'); }}
-          className="w-16 h-16 bg-primary text-on-primary rounded-full shadow-2xl flex justify-center items-center hover:scale-105 active:bg-primary-container active:text-on-primary-container transition"
-        >
-          <Plus size={32} />
-        </button>
-      </div>
+      {abaAtiva !== 'vendas' && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <button 
+            onClick={() => { setLoteAtivoId(true); setSheetView('novo_lote'); }}
+            className="w-16 h-16 bg-primary text-on-primary rounded-full shadow-2xl flex justify-center items-center hover:scale-105 active:bg-primary-container active:text-on-primary-container transition"
+          >
+            <Plus size={32} />
+          </button>
+        </div>
+      )}
 
       {isScanning && (
         <ScannerQR 
