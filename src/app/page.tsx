@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   Leaf, Droplets, Sprout, ShieldAlert, Camera, Sparkles, ArrowRight, Camera as CameraIcon, Plus, LayoutGrid, PackageOpen, Skull, ThermometerSun, QrCode, ArrowLeft, Users, Flower2, AlertTriangle, X, Bot,
-  DollarSign, ShoppingBag, AlertCircle, TrendingUp, Settings, Briefcase, Truck
+  DollarSign, ShoppingBag, AlertCircle, TrendingUp, Settings, Briefcase, Truck, ShoppingCart
 } from 'lucide-react';
 import Link from 'next/link';
 import { RegistrarUsoInsumo } from '@/components/RegistrarUsoInsumo';
