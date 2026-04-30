@@ -207,27 +207,43 @@ export default function PDVPage() {
   if (loading) return <div className="h-screen flex items-center justify-center bg-white"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div></div>;
 
   return (
-    <div className="flex h-screen bg-[#F3F4F6] overflow-hidden font-sans text-[#191C1D]">
+    <div className="flex flex-col lg:flex-row h-screen bg-[#F3F4F6] overflow-hidden font-sans text-[#191C1D]">
       
       {/* Esquerda: Catálogo */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="p-6 space-y-4 bg-white/80 backdrop-blur-md border-b border-gray-200">
-          <div className="flex items-center gap-4">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="p-4 md:p-6 space-y-4 bg-white/80 backdrop-blur-md border-b border-gray-200">
+          <div className="flex items-center gap-3">
             <div className="flex-1 relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#064E3B] transition" size={20} />
               <input 
                 type="text" 
-                placeholder="Buscar plantas por nome ou lote..." 
+                placeholder="Buscar plantas..." 
                 value={buscaProduto}
                 onChange={e => setBuscaProduto(e.target.value)}
-                className="w-full bg-gray-100 rounded-2xl pl-12 pr-4 py-3.5 outline-none focus:bg-white focus:ring-2 focus:ring-[#064E3B]/10 transition text-lg font-medium"
+                className="w-full bg-gray-100 rounded-2xl pl-11 pr-4 py-3 outline-none focus:bg-white focus:ring-2 focus:ring-[#064E3B]/10 transition text-sm md:text-lg font-medium"
               />
             </div>
             <button 
               onClick={() => setShowScanner(true)}
-              className="bg-[#064E3B] text-white p-4 rounded-2xl shadow-lg shadow-[#064E3B]/20 hover:scale-105 active:scale-95 transition"
+              className="bg-[#064E3B] text-white p-3 md:p-4 rounded-2xl shadow-lg shadow-[#064E3B]/20 hover:scale-105 active:scale-95 transition"
             >
-              <Scan size={24} />
+              <Scan size={20} />
+            </button>
+            {/* Botão de Carrinho Mobile (só aparece em telas pequenas) */}
+            <button 
+              onClick={() => {
+                const cart = document.getElementById('cart-sidebar');
+                cart?.classList.toggle('hidden');
+                cart?.classList.toggle('flex');
+              }}
+              className="lg:hidden bg-white text-[#064E3B] p-3 rounded-2xl border border-gray-200 relative"
+            >
+              <ShoppingCart size={20} />
+              {carrinho.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                  {carrinho.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -236,7 +252,7 @@ export default function PDVPage() {
               <button 
                 key={cat.nome}
                 onClick={() => setFiltroCategoria(cat.nome)}
-                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition ${filtroCategoria === cat.nome ? 'bg-[#064E3B] text-white shadow-md' : 'bg-white text-gray-500 border border-gray-200 hover:border-[#064E3B]/30'}`}
+                className={`px-4 py-2 rounded-full text-[10px] md:text-xs font-bold whitespace-nowrap transition ${filtroCategoria === cat.nome ? 'bg-[#064E3B] text-white shadow-md' : 'bg-white text-gray-500 border border-gray-200 hover:border-[#064E3B]/30'}`}
               >
                 {cat.nome}
               </button>
@@ -244,7 +260,7 @@ export default function PDVPage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 content-start">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start">
           {lotes.filter(l => 
             (filtroCategoria === 'Todas' || l.categoria?.nome === filtroCategoria) &&
             (l.especie?.nome.toLowerCase().includes(buscaProduto.toLowerCase()) || l.identificacao_lote.toLowerCase().includes(buscaProduto.toLowerCase()))
@@ -300,7 +316,10 @@ export default function PDVPage() {
       </div>
 
       {/* Direita: Carrinho (Glassmorphism) */}
-      <div className="w-[450px] flex flex-col bg-white/70 backdrop-blur-2xl border-l border-gray-200 shadow-2xl relative">
+      <div 
+        id="cart-sidebar"
+        className="hidden lg:flex w-full lg:w-[400px] xl:w-[450px] flex-col bg-white/70 backdrop-blur-2xl border-l border-gray-200 shadow-2xl relative z-[100] lg:z-0 h-full overflow-hidden"
+      >
         
         {/* Header Cliente */}
         <div className="p-6 border-b border-gray-200/50">
