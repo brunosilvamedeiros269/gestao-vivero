@@ -629,15 +629,18 @@ export default function TelaProdutorApp() {
       </header>
 
       <div className="px-6 py-4">
-        <div className="flex bg-surface-container-high rounded-full p-1">
-          <button onClick={() => setAbaAtiva('bercario')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'bercario' ? 'bg-primary text-on-primary shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
+        <div className="flex bg-surface-container-high rounded-full p-1 overflow-x-auto no-scrollbar">
+          <button onClick={() => setAbaAtiva('bercario')} className={`flex-1 py-3 px-4 whitespace-nowrap text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'bercario' ? 'bg-primary text-on-primary shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
             🌱 Berçário
           </button>
-          <button onClick={() => setAbaAtiva('prontas')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'prontas' ? 'bg-amber-500 text-black shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
+          <button onClick={() => setAbaAtiva('prontas')} className={`flex-1 py-3 px-4 whitespace-nowrap text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'prontas' ? 'bg-amber-500 text-black shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
             🌻 Prontas
           </button>
+          <Link href="/admin/pdv" className="flex-1 py-3 px-4 whitespace-nowrap text-[10px] font-black uppercase tracking-widest rounded-full transition text-center text-secondary hover:bg-surface-container-highest flex items-center justify-center gap-1">
+            🛒 Vendas
+          </Link>
           {userRole === 'admin' && (
-            <button onClick={() => setAbaAtiva('admin')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'admin' ? 'bg-on-surface text-surface shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
+            <button onClick={() => setAbaAtiva('admin')} className={`flex-1 py-3 px-4 whitespace-nowrap text-[10px] font-black uppercase tracking-widest rounded-full transition ${abaAtiva === 'admin' ? 'bg-on-surface text-surface shadow' : 'text-secondary hover:bg-surface-container-highest'}`}>
               📊 Gestão
             </button>
           )}
@@ -784,6 +787,19 @@ export default function TelaProdutorApp() {
             <div className="space-y-3">
               <h4 className="text-xs font-black text-secondary uppercase tracking-widest px-1">Ferramentas de Gestão</h4>
               
+              <Link href="/admin/pdv" className="flex items-center justify-between p-5 bg-[#064E3B] text-white rounded-[2rem] shadow-xl shadow-[#064E3B]/20 hover:scale-[1.02] active:scale-[0.98] transition group">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-2xl">
+                    <ShoppingCart size={24} />
+                  </div>
+                  <div>
+                    <p className="font-bold">PDV - Ponto de Venda</p>
+                    <p className="text-xs opacity-80">Realizar vendas e emitir comprovantes.</p>
+                  </div>
+                </div>
+                <ArrowRight size={20} className="opacity-50" />
+              </Link>
+
               <Link href="/admin/compras" className="flex items-center justify-between p-5 bg-surface-container-lowest border border-surface-container rounded-3xl hover:border-primary transition group">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition">
@@ -870,7 +886,13 @@ export default function TelaProdutorApp() {
       </div>
 
       {/* FABs */}
-      <div className="fixed bottom-6 left-6 z-40">
+      <div className="fixed bottom-6 left-6 z-40 flex items-center gap-4">
+        <Link 
+          href="/admin/pdv"
+          className="w-16 h-16 bg-[#064E3B] text-white rounded-full shadow-2xl flex justify-center items-center hover:scale-110 active:scale-95 transition-all"
+        >
+          <ShoppingCart size={28} />
+        </Link>
         <button 
           onClick={() => setIsScanning(true)}
           className="w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-2xl border border-surface-container flex justify-center items-center hover:scale-105 transition"
