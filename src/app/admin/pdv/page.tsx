@@ -68,10 +68,10 @@ export default function PDVPage() {
     setLoading(true);
     try {
       const [resLotes, resClientes, resConfig, resCats] = await Promise.all([
-        supabase.from('lotes_plantio').select('*, especie:especies(*), categoria:categorias(nome)').gt('quantidade_restante', 0),
+        supabase.from('lotes_plantio').select('*, especie:especies(*)').gt('quantidade_restante', 0),
         supabase.from('clientes').select('*').order('nome'),
         supabase.from('configuracoes').select('*').order('created_at', { ascending: false }).limit(1),
-        supabase.from('categorias').select('nome')
+        supabase.from('categorias_insumo').select('nome')
       ]);
 
       setLotes(resLotes.data || []);
