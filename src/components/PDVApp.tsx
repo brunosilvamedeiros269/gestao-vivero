@@ -139,36 +139,32 @@ export default function PDVApp({ onBack }: PDVAppProps) {
 
   return (
     <div className="flex flex-col h-full bg-surface-container-lowest animate-in fade-in duration-500">
-      {/* Header do PDV */}
-      <div className="px-6 py-4 flex items-center justify-between gap-4 border-b border-surface-container">
-        <button onClick={onBack} className="p-2 hover:bg-surface-container rounded-full transition">
-          <ArrowLeft size={24} />
-        </button>
-        <div className="flex-1">
-          <h2 className="text-xl font-black text-primary uppercase tracking-tight">Vendas Diretas</h2>
-          <p className="text-xs text-secondary font-medium uppercase tracking-widest">Nursery POS</p>
-        </div>
-        <div className="relative group">
-          <button className="flex items-center gap-2 px-4 py-2 bg-surface-container-high rounded-full text-sm font-bold border border-surface-container">
-            <User size={16} />
-            {clienteSelecionado ? clienteSelecionado.nome : 'Consumidor Final'}
+      {/* Busca e Filtros - Agora com Seletor de Cliente integrado */}
+      <div className="py-4 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary/50" size={20} />
+            <input 
+              type="text" 
+              placeholder="Buscar plantas..." 
+              value={buscaProduto}
+              onChange={e => setBuscaProduto(e.target.value)}
+              className="w-full bg-surface-container-low rounded-[2rem] pl-12 pr-4 py-4 outline-none focus:ring-2 focus:ring-primary/20 transition text-lg font-medium"
+            />
+          </div>
+          <button className="flex items-center justify-center w-14 h-14 bg-surface-container-high rounded-full border border-surface-container text-primary shadow-sm active:scale-95 transition">
+            <User size={24} />
           </button>
         </div>
-      </div>
-
-      {/* Busca e Filtros */}
-      <div className="px-6 py-4 space-y-4">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary/50" size={20} />
-          <input 
-            type="text" 
-            placeholder="Buscar plantas..." 
-            value={buscaProduto}
-            onChange={e => setBuscaProduto(e.target.value)}
-            className="w-full bg-surface-container-low rounded-[2rem] pl-12 pr-4 py-4 outline-none focus:ring-2 focus:ring-primary/20 transition text-lg font-medium"
-          />
-        </div>
         
+        {clienteSelecionado && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-xl text-xs font-bold border border-primary/20 animate-in slide-in-from-top-2">
+            <CheckCircle2 size={14} />
+            Cliente: {clienteSelecionado.nome}
+            <button onClick={() => setClienteSelecionado(null)} className="ml-auto p-1 hover:bg-primary/20 rounded-full"><X size={12}/></button>
+          </div>
+        )}
+
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
           {categorias.map(cat => (
             <button 
@@ -183,7 +179,7 @@ export default function PDVApp({ onBack }: PDVAppProps) {
       </div>
 
       {/* Grid de Produtos */}
-      <div className="flex-1 overflow-y-auto px-6 pb-32">
+      <div className="flex-1 overflow-y-auto pb-32">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {lotesFiltrados.map(lote => (
             <div key={lote.id} className="group bg-surface-container-lowest rounded-[2.5rem] border border-surface-container overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300">

@@ -886,7 +886,7 @@ export default function TelaProdutorApp() {
         )}
 
         {(!loading && abaAtiva === 'vendas') && (
-          <div className="fixed inset-0 z-50 bg-white lg:relative lg:z-0 lg:h-[70vh]">
+          <div className="animate-in fade-in slide-in-from-right duration-300 px-6 pb-20">
             <PDVApp onBack={() => setAbaAtiva('bercario')} />
           </div>
         )}
