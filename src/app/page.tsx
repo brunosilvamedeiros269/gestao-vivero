@@ -869,14 +869,6 @@ export default function TelaProdutorApp() {
                 <ArrowRight size={20} className="text-surface-container-highest" />
               </button>
             </div>
-          </div>
-        )}
-
-        {(!loading && abaAtiva === 'vendas') && (
-          <div className="fixed inset-0 z-50 bg-white lg:relative lg:z-0 lg:h-[70vh]">
-            <PDVApp onBack={() => setAbaAtiva('bercario')} />
-          </div>
-        )}
 
             {/* Insumos Críticos */}
             {insumosCriticos > 0 && (
@@ -890,6 +882,16 @@ export default function TelaProdutorApp() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {(!loading && abaAtiva === 'vendas') && (
+          <div className="fixed inset-0 z-50 bg-white lg:relative lg:z-0 lg:h-[70vh]">
+            <PDVApp onBack={() => setAbaAtiva('bercario')} />
+          </div>
+        )}
+
+
       </div>
 
       {/* FABs */}
