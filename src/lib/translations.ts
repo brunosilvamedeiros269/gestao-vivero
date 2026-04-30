@@ -45,6 +45,7 @@ export const translations = {
     updating_catalog: "Actualizando Catálogo...",
     processed: "Procesados",
     sales: "Gestión de Ventas",
+    pos: "Punto de Venta (PDV)",
   },
   pt: {
     dashboard: "Painel de Controle",
@@ -92,6 +93,7 @@ export const translations = {
     updating_catalog: "Atualizando Catálogo...",
     processed: "Processados",
     sales: "Gestão de Vendas",
+    pos: "Ponto de Venda (PDV)",
   },
   en: {
     dashboard: "Dashboard",
@@ -133,6 +135,7 @@ export const translations = {
     updating_catalog: "Updating Catalog...",
     processed: "Processed",
     sales: "Sales Management",
+    pos: "Point of Sale (POS)",
   }
 };
 

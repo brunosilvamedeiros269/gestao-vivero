@@ -26,7 +26,10 @@ export default function ConfiguracoesPage() {
     ml_access_token: '',
     exito_api_key: '',
     falabella_api_key: '',
-    tiktok_app_key: ''
+    tiktok_app_key: '',
+    pdv_tipo_impressora: 'normal',
+    pdv_desconto_maximo: '10',
+    pdv_metodos_pagamento: ['efectivo', 'nequi', 'daviplata', 'transfiya']
   });
 
   useEffect(() => {
@@ -204,6 +207,69 @@ export default function ConfiguracoesPage() {
               <label className="block text-sm font-bold text-on-surface mb-1">Custo Médio Hora/Homem (COP)</label>
               <input type="number" value={valorHora} onChange={(e) => setValorHora(e.target.value)} placeholder="Ex: 5000" className="w-full bg-surface border border-surface-container-highest rounded-xl px-4 py-2 outline-none focus:border-orange-500 font-medium" />
               <p className="text-[10px] text-secondary mt-1">Será usado no PWA para jogar o custo de mão de obra de podas/regas no custo final da planta.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Bloco PDV e Vendas Presenciais */}
+        <section className="bg-blue-500/5 border border-blue-500/20 p-6 rounded-3xl">
+          <h2 className="text-lg font-bold text-blue-600 flex items-center gap-2 mb-4"><ShoppingCart size={20}/> PDV & Vendas Presenciais</h2>
+          <p className="text-xs text-secondary mb-6">Configure as regras de negócio para sua frente de caixa física.</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-2">Tipo de Impressora</label>
+                <div className="flex gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setForm(p => ({...p, pdv_tipo_impressora: 'normal'}))}
+                    className={`flex-1 p-3 rounded-xl border-2 text-xs font-bold transition ${form.pdv_tipo_impressora === 'normal' ? 'border-blue-600 bg-blue-50' : 'border-surface-container-highest opacity-50'}`}
+                  >
+                    Normal (A4)
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setForm(p => ({...p, pdv_tipo_impressora: 'termica'}))}
+                    className={`flex-1 p-3 rounded-xl border-2 text-xs font-bold transition ${form.pdv_tipo_impressora === 'termica' ? 'border-blue-600 bg-blue-50' : 'border-surface-container-highest opacity-50'}`}
+                  >
+                    Térmica (80mm)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-on-surface mb-1">Desconto Máximo Permitido (%)</label>
+                <input 
+                  type="number" 
+                  name="pdv_desconto_maximo"
+                  value={form.pdv_desconto_maximo} 
+                  onChange={handleChange}
+                  className="w-full bg-surface border border-surface-container-highest rounded-xl px-4 py-2 outline-none focus:border-blue-500 font-medium" 
+                />
+                <p className="text-[10px] text-secondary mt-1">Limite que o time operacional pode aplicar sem autorização do gestor.</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-on-surface mb-3">Métodos de Pagamento Aceitos</label>
+              <div className="grid grid-cols-2 gap-2">
+                {['efectivo', 'nequi', 'daviplata', 'transfiya', 'pse', 'tarjeta', 'efecty'].map(metodo => (
+                  <label key={metodo} className="flex items-center gap-2 p-2 rounded-lg border border-surface-container cursor-pointer hover:bg-surface-container-low transition">
+                    <input 
+                      type="checkbox"
+                      checked={form.pdv_metodos_pagamento?.includes(metodo)}
+                      onChange={(e) => {
+                        const m = form.pdv_metodos_pagamento || [];
+                        const novo = e.target.checked ? [...m, metodo] : m.filter(x => x !== metodo);
+                        setForm(p => ({...p, pdv_metodos_pagamento: novo}));
+                      }}
+                      className="accent-blue-600"
+                    />
+                    <span className="text-xs font-bold capitalize">{metodo}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
         </section>
