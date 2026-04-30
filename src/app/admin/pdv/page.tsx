@@ -148,13 +148,13 @@ export default function PDVPage() {
     try {
       const total = calcularTotal();
       const payload = {
-        plataforma: 'loja',
+        plataforma: 'pdv_loja',
         cliente: clienteSelecionado || { nome: 'Consumidor Final' },
         valor_total: total,
         status_pagamento: 'pago',
         status_fulfillment: 'entregue',
         metodo_pagamento: metodoPagamento,
-        items: carrinho.map(i => ({
+        items_json: carrinho.map(i => ({
           lote_id: i.id,
           nome: i.especie?.nome,
           quantidade: i.quantidade,
@@ -162,11 +162,29 @@ export default function PDVPage() {
         }))
       };
 
+      // 1. Criar o Pedido
       const { data: pedido, error: errorPedido } = await supabase.from('pedidos_venda').insert([payload]).select().single();
-      if (errorPedido) throw errorPedido;
+      if (errorPedido) {
+        console.error('Erro Pedido:', errorPedido);
+        throw errorPedido;
+      }
 
+      // 2. Criar os Itens e Abater Estoque
       for (const item of carrinho) {
-        await supabase.rpc('abater_estoque_lote', { lote_id_param: item.id, qtd_param: item.quantidade });
+        // Gravar item normalizado
+        await supabase.from('itens_pedido').insert([{
+          pedido_id: pedido.id,
+          lote_id: item.id,
+          quantidade: item.quantidade,
+          preco_unitario: item.preco_unitario
+        }]);
+
+        // Abater estoque via RPC
+        const { error: errorRPC } = await supabase.rpc('abater_estoque_lote', { 
+          lote_id_param: item.id, 
+          qtd_param: item.quantidade 
+        });
+        if (errorRPC) console.error('Erro RPC Abate:', errorRPC);
       }
 
       setPedidoFinalizado(pedido);
@@ -177,8 +195,9 @@ export default function PDVPage() {
       setMetodoPagamento('');
       setDescontoGeral(0);
       carregarDados();
-    } catch (err) {
-      alert('Erro ao processar venda');
+    } catch (err: any) {
+      console.error('Erro completo na venda:', err);
+      alert('Erro ao processar venda: ' + (err.message || 'Erro desconhecido'));
     }
   };
 
