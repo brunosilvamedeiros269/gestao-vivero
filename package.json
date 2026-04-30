@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && npx cap sync",
+    "static-export": "next build",
+    "mobile:sync": "npx cap sync android",
+    "mobile:open": "npx cap open android",
     "start": "next start",
     "lint": "eslint"
   },
