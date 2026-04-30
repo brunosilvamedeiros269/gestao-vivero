@@ -513,7 +513,7 @@ export default function PDVPage() {
              <p className="text-gray-400 text-sm font-bold mb-8">Pedido #{pedidoFinalizado.id.slice(0,8)}</p>
 
              <button 
-               onClick={() => window.print()}
+               onClick={() => setTimeout(() => window.print(), 100)}
                className="w-full py-4 bg-gray-100 text-gray-700 rounded-2xl font-black flex items-center justify-center gap-3 mb-3 hover:bg-gray-200 transition"
              >
                <Printer size={20} /> IMPRIMIR RECIBO
