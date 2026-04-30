@@ -260,7 +260,7 @@ export default function PDVPage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 content-start">
           {lotes.filter(l => 
             (filtroCategoria === 'Todas' || l.categoria?.nome === filtroCategoria) &&
             (l.especie?.nome.toLowerCase().includes(buscaProduto.toLowerCase()) || l.identificacao_lote.toLowerCase().includes(buscaProduto.toLowerCase()))
@@ -268,8 +268,15 @@ export default function PDVPage() {
             <div 
               key={lote.id} 
               onClick={() => adicionarAoCarrinho(lote)}
-              className="bg-white rounded-[2.5rem] p-4 border border-gray-100 hover:border-[#064E3B] hover:shadow-[0_20px_50px_rgba(6,78,59,0.1)] transition-all duration-500 group cursor-pointer active:scale-95 flex flex-col"
+              className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] p-4 border border-white/40 hover:shadow-[0_20px_50px_rgba(6,78,59,0.15)] transition-all duration-500 group cursor-pointer active:scale-95 flex flex-col relative"
             >
+              {/* Badge de Estoque Circular Minimalista */}
+              <div className="absolute top-2 right-2 z-10">
+                <div className="bg-[#064E3B] text-white w-10 h-10 rounded-full flex items-center justify-center font-black text-xs shadow-xl border-2 border-white/50">
+                  {lote.quantidade_restante}
+                </div>
+              </div>
+
               <div className="aspect-[4/5] rounded-[2rem] overflow-hidden mb-4 relative bg-gray-50 shadow-inner">
                 {lote.especie?.url_foto_comercial || lote.especie?.url_foto ? (
                   <img 
@@ -281,31 +288,28 @@ export default function PDVPage() {
                   <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gradient-to-br from-gray-50 to-gray-100"><Leaf size={60} strokeWidth={1} /></div>
                 )}
                 
-                <div className="absolute top-3 left-3 bg-[#064E3B] text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg">
-                  {lote.quantidade_restante} EM ESTOQUE
-                </div>
-
                 {lote.especie?.url_foto_comercial && (
-                  <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-sm">
-                    <CheckCircle2 size={14} className="text-[#059669]" />
+                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm border border-white/50">
+                    <CheckCircle2 size={12} className="text-[#059669]" />
+                    <span className="text-[10px] font-black text-[#064E3B] uppercase tracking-tighter">HQ Image</span>
                   </div>
                 )}
               </div>
               
               <div className="px-1 flex-1 flex flex-col">
                 <div className="mb-1">
-                  <p className="text-[10px] text-[#84A98C] font-black uppercase tracking-widest">{lote.especie?.categorias_ia || 'Planta'}</p>
-                  <h3 className="font-black text-lg text-gray-800 leading-tight group-hover:text-[#064E3B] transition-colors">{lote.especie?.nome}</h3>
+                  <p className="text-[10px] text-[#064E3B]/60 font-black uppercase tracking-widest">{lote.especie?.categorias_ia || 'Planta'}</p>
+                  <h3 className="font-black text-lg text-gray-800 leading-tight group-hover:text-[#064E3B] transition-colors line-clamp-2">{lote.especie?.nome}</h3>
                 </div>
                 
-                <p className="text-[10px] text-gray-400 font-bold mb-4">LOTE: {lote.identificacao_lote}</p>
+                <p className="text-[10px] text-gray-400 font-bold mb-4 uppercase tracking-tighter">LOTE: {lote.identificacao_lote}</p>
                 
-                <div className="mt-auto flex items-center justify-between">
+                <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100/50">
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-400 font-bold leading-none mb-1">PREÇO</span>
-                    <span className="text-[#064E3B] font-black text-2xl tracking-tighter">{formatCOP(lote.preco_venda_estimado || 10000)}</span>
+                    <span className="text-[#064E3B] font-black text-xl tracking-tighter">{formatCOP(lote.preco_venda_estimado || 10000)}</span>
                   </div>
-                  <div className="bg-[#064E3B] text-white p-3 rounded-2xl shadow-lg shadow-[#064E3B]/20 transform group-hover:rotate-12 transition-all">
+                  <div className="bg-[#064E3B] text-white p-4 rounded-full shadow-lg shadow-[#064E3B]/30 transform group-hover:scale-110 transition-all">
                     <Plus size={20} strokeWidth={3} />
                   </div>
                 </div>
@@ -435,10 +439,19 @@ export default function PDVPage() {
           <button 
             disabled={carrinho.length === 0}
             onClick={() => setShowCheckout(true)}
-            className="w-full py-5 bg-[#064E3B] text-white rounded-[1.5rem] font-black text-xl shadow-2xl shadow-[#064E3B]/30 hover:bg-[#003527] disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-3 active:scale-95"
+            className="w-full py-5 bg-[#064E3B] text-white rounded-full font-black text-xl shadow-2xl shadow-[#064E3B]/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 group relative overflow-hidden"
           >
-            FINALIZAR VENDA <ChevronRight size={24} />
+            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+            <span>FINALIZAR VENDA</span> 
+            <ChevronRight size={24} />
           </button>
+
+          <div className="flex items-center justify-center gap-4 opacity-30 grayscale hover:grayscale-0 transition-all duration-700">
+             <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/Logo_Nequi.png" alt="Nequi" className="h-4" />
+             <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Logo_Daviplata.png" alt="Daviplata" className="h-4" />
+             <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+             <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Colombia Premium Retail</span>
+          </div>
         </div>
       </div>
 
