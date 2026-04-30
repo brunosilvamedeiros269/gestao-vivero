@@ -35,7 +35,7 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
   const [garantiaAnuncio, setGarantiaAnuncio] = useState('');
   const [videoAnuncio, setVideoAnuncio] = useState('');
   const [gerandoIA, setGerandoIA] = useState(false);
-  const [fotoComercial, setFotoComercial] = useState<File | null>(null);
+  const [fotosComerciais, setFotosComerciais] = useState<File[]>([]);
 
   // B2B State
   const [modalB2B, setModalB2B] = useState(false);
@@ -117,7 +117,7 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
     setPlataformaAlvo(platId);
     setTituloAnuncio(`Planta ${lote.especie?.nome} - Lote ${lote.identificacao_lote}`.substring(0, 60));
     setDescricaoAnuncio(`Venda de lote de plantas.\n\nEspécie: ${lote.especie?.nome}\nLote ID: ${lote.identificacao_lote}\nCultivo registrado e monitorado pelo sistema de gestão de viveiros.`);
-    setFotoComercial(null);
+    setFotosComerciais([]);
     setModalAberto(true);
   };
 
@@ -155,23 +155,28 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
       let idExternoFinal = `MOCK-${Math.floor(Math.random()*10000)}`;
 
       if (plataformaAlvo === 'mercadolivre') {
-        let fotoRealUrl = fotosEvolucao.length > 0 ? fotosEvolucao[0].foto_url : null;
+        let urlsFotos: string[] = fotosEvolucao.map(f => f.foto_url);
 
-        // Se o usuário subiu uma foto comercial manual, usamos ela.
-        if (fotoComercial) {
-          const fileName = `comercial-${id}-${Date.now()}-${fotoComercial.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
-          const { error: uploadError } = await supabase.storage
-            .from('fotos_evolutivas') // Reutilizando bucket ou criando um novo se preferir
-            .upload(fileName, fotoComercial);
-          
-          if (uploadError) throw uploadError;
-          
-          const { data: { publicUrl } } = supabase.storage.from('fotos_evolutivas').getPublicUrl(fileName);
-          fotoRealUrl = publicUrl;
+        // Se o usuário subiu fotos comerciais manuais, elas tomam precedência ou complementam
+        if (fotosComerciais.length > 0) {
+          const uploads = fotosComerciais.map(async (file) => {
+            const fileName = `comercial-${id}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+            const { error: uploadError } = await supabase.storage
+              .from('fotos_evolutivas')
+              .upload(fileName, file);
+            
+            if (uploadError) throw uploadError;
+            
+            const { data: { publicUrl } } = supabase.storage.from('fotos_evolutivas').getPublicUrl(fileName);
+            return publicUrl;
+          });
+
+          const novasUrls = await Promise.all(uploads);
+          urlsFotos = [...novasUrls, ...urlsFotos].slice(0, 10); // Limite de 10 fotos ML
         }
 
-        if (!fotoRealUrl) {
-          alert("Por favor, selecione uma foto comercial ou registre uma evolução antes de publicar.");
+        if (urlsFotos.length === 0) {
+          alert("Por favor, selecione ao menos uma foto comercial ou registre uma evolução antes de publicar.");
           setSalvando(false);
           return;
         }
@@ -183,7 +188,7 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
             lote, 
             preco: parseFloat(precoVenda), 
             plataforma: 'mercadolivre',
-            foto_url: fotoRealUrl,
+            fotos: urlsFotos,
             titulo_editado: tituloAnuncio,
             descricao_editada: descricaoAnuncio,
             garantia: garantiaAnuncio,
@@ -572,25 +577,38 @@ export default function GerenciadorLotePage({ params }: { params: Promise<{ id: 
                   </div>
 
                   <div className="pt-2 border-t border-primary/10">
-                     <p className="text-xs font-bold text-secondary mb-2">Foto Comercial do Produto</p>
-                     <label className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-dashed border-primary/20 rounded-xl cursor-pointer hover:bg-primary/5 transition group mb-3">
-                        {fotoComercial ? (
-                          <div className="text-center">
-                            <CheckCircle2 size={24} className="text-green-500 mx-auto mb-1" />
-                            <span className="text-[10px] font-bold text-green-600 block truncate max-w-[200px]">{fotoComercial.name}</span>
-                            <button onClick={(e) => { e.preventDefault(); setFotoComercial(null); }} className="text-[9px] text-error font-black uppercase mt-1">Remover</button>
+                     <p className="text-xs font-bold text-secondary mb-2">Fotos Comerciais (Até 10 fotos)</p>
+                     
+                     <div className="grid grid-cols-3 gap-2 mb-3">
+                        {fotosComerciais.map((f, idx) => (
+                          <div key={idx} className="relative aspect-square bg-surface border border-surface-container-highest rounded-lg overflow-hidden group">
+                             <img src={URL.createObjectURL(f)} alt="preview" className="w-full h-full object-cover" />
+                             <button 
+                               onClick={() => setFotosComerciais(prev => prev.filter((_, i) => i !== idx))}
+                               className="absolute top-1 right-1 p-1 bg-error text-white rounded-full opacity-0 group-hover:opacity-100 transition"
+                             >
+                               <AlertTriangle size={10} />
+                             </button>
                           </div>
-                        ) : (
-                          <>
-                            <Camera size={24} className="text-primary group-hover:scale-110 transition" />
-                            <div className="text-center">
-                              <span className="text-[10px] font-bold text-primary block uppercase tracking-wider">Subir Foto Comercial</span>
-                              <span className="text-[9px] text-secondary block">PNG ou JPG (Fundo branco recomendado)</span>
-                            </div>
-                          </>
+                        ))}
+                        
+                        {fotosComerciais.length < 10 && (
+                          <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-primary/20 rounded-lg cursor-pointer hover:bg-primary/5 transition">
+                             <Camera size={20} className="text-primary" />
+                             <span className="text-[8px] font-bold text-primary uppercase mt-1">Add Foto</span>
+                             <input 
+                                type="file" 
+                                accept="image/*" 
+                                multiple 
+                                onChange={(e) => {
+                                  const files = Array.from(e.target.files || []);
+                                  setFotosComerciais(prev => [...prev, ...files].slice(0, 10));
+                                }} 
+                                className="hidden" 
+                             />
+                          </label>
                         )}
-                        <input type="file" accept="image/*" onChange={(e) => setFotoComercial(e.target.files?.[0] || null)} className="hidden" />
-                     </label>
+                     </div>
 
                      <p className="text-xs font-bold text-secondary mb-2">Atributos Opcionais</p>
                      <div className="grid grid-cols-2 gap-3">

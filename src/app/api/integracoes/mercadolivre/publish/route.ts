@@ -4,13 +4,13 @@ import { supabase } from '@/lib/supabase';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { lote, preco, plataforma, foto_url, titulo_editado, descricao_editada, garantia, luz, altura, vaso, video_id } = body;
+    const { lote, preco, plataforma, fotos, titulo_editado, descricao_editada, garantia, luz, altura, vaso, video_id } = body;
 
     if (plataforma !== 'mercadolivre') {
       return NextResponse.json({ error: 'Endpoint exclusivo para Mercado Livre' }, { status: 400 });
     }
 
-    if (!foto_url) {
+    if (!fotos || !Array.isArray(fotos) || fotos.length === 0) {
       return NextResponse.json({ error: 'É obrigatório ter ao menos uma foto cadastrada no lote para publicar no Mercado Livre.' }, { status: 400 });
     }
 
@@ -51,9 +51,7 @@ export async function POST(req: Request) {
         plain_text: descricao
       },
       attributes: attributes,
-      pictures: [
-        { source: foto_url }
-      ]
+      pictures: fotos.slice(0, 10).map(f => ({ source: f }))
     };
 
     if (garantia) {
