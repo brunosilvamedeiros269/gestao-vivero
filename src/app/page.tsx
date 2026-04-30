@@ -890,8 +890,6 @@ export default function TelaProdutorApp() {
                 </div>
               </div>
             )}
-          </div>
-        )}
       </div>
 
       {/* FABs */}
