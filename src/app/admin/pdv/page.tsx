@@ -116,13 +116,29 @@ export default function PDVPage() {
 
   const handleCriarCliente = async () => {
     if (!novoCliente.nome) return;
-    const { data, error } = await supabase.from('clientes').insert([novoCliente]).select().single();
-    if (!error) {
+    try {
+      const { data, error } = await supabase.from('clientes').insert([novoCliente]).select().single();
+      if (error) throw error;
+      
       setClientes([data, ...clientes]);
       setClienteSelecionado(data);
       setShowNovoCliente(false);
       setNovoCliente({ nome: '', whatsapp: '', email: '' });
+    } catch (err) {
+      console.error('Erro ao criar cliente:', err);
+      alert('Erro ao cadastrar cliente. Verifique a conexão.');
     }
+  };
+
+  const aplicarMascaraTelefone = (valor: string) => {
+    // Remove tudo que não é número
+    const numeros = valor.replace(/\D/g, '');
+    
+    // Formato Colômbia: +57 3XX XXX XXXX
+    if (numeros.length <= 2) return `+57 ${numeros}`;
+    if (numeros.length <= 5) return `+57 ${numeros.slice(0, 3)} ${numeros.slice(3)}`;
+    if (numeros.length <= 8) return `+57 ${numeros.slice(0, 3)} ${numeros.slice(3, 6)} ${numeros.slice(6)}`;
+    return `+57 ${numeros.slice(0, 3)} ${numeros.slice(3, 6)} ${numeros.slice(6, 10)}`;
   };
 
   const handleFinalizarVenda = async () => {
@@ -383,7 +399,17 @@ export default function PDVPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase ml-1">WhatsApp</label>
-                  <input type="text" value={novoCliente.whatsapp} onChange={e => setNovoCliente({...novoCliente, whatsapp: e.target.value})} className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 outline-none focus:border-[#064E3B]" />
+                  <input 
+                    type="text" 
+                    placeholder="+57 300 000 0000"
+                    value={novoCliente.whatsapp} 
+                    onChange={e => {
+                      const val = e.target.value.replace('+57 ', '');
+                      const masked = aplicarMascaraTelefone(val);
+                      setNovoCliente({...novoCliente, whatsapp: masked});
+                    }} 
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 outline-none focus:border-[#064E3B] font-bold" 
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Email</label>
