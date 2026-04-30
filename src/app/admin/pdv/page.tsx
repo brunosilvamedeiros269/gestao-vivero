@@ -252,25 +252,45 @@ export default function PDVPage() {
             <div 
               key={lote.id} 
               onClick={() => adicionarAoCarrinho(lote)}
-              className="bg-white rounded-[2rem] p-3 border border-transparent hover:border-[#064E3B]/20 hover:shadow-2xl transition-all duration-300 group cursor-pointer active:scale-95"
+              className="bg-white rounded-[2.5rem] p-4 border border-gray-100 hover:border-[#064E3B] hover:shadow-[0_20px_50px_rgba(6,78,59,0.1)] transition-all duration-500 group cursor-pointer active:scale-95 flex flex-col"
             >
-              <div className="aspect-square rounded-[1.5rem] overflow-hidden mb-3 relative bg-gray-50">
-                {lote.especie?.foto_url ? (
-                  <img src={lote.especie.foto_url} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
+              <div className="aspect-[4/5] rounded-[2rem] overflow-hidden mb-4 relative bg-gray-50 shadow-inner">
+                {lote.especie?.url_foto_comercial || lote.especie?.url_foto ? (
+                  <img 
+                    src={lote.especie?.url_foto_comercial || lote.especie?.url_foto} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition duration-700 ease-out" 
+                    alt={lote.especie?.nome}
+                  />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300"><Leaf size={40} /></div>
+                  <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gradient-to-br from-gray-50 to-gray-100"><Leaf size={60} strokeWidth={1} /></div>
                 )}
-                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black text-[#064E3B] shadow-sm">
-                  {lote.quantidade_restante} DISPONÍVEL
+                
+                <div className="absolute top-3 left-3 bg-[#064E3B] text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg">
+                  {lote.quantidade_restante} EM ESTOQUE
                 </div>
+
+                {lote.especie?.url_foto_comercial && (
+                  <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-sm">
+                    <CheckCircle2 size={14} className="text-[#059669]" />
+                  </div>
+                )}
               </div>
-              <div className="px-1">
-                <h3 className="font-bold text-sm text-gray-800 line-clamp-1">{lote.especie?.nome}</h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Lote: {lote.identificacao_lote}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[#064E3B] font-black text-lg">{formatCOP(lote.preco_venda_estimado || 10000)}</span>
-                  <div className="bg-[#064E3B]/5 text-[#064E3B] p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition">
-                    <Plus size={16} />
+              
+              <div className="px-1 flex-1 flex flex-col">
+                <div className="mb-1">
+                  <p className="text-[10px] text-[#84A98C] font-black uppercase tracking-widest">{lote.especie?.categorias_ia || 'Planta'}</p>
+                  <h3 className="font-black text-lg text-gray-800 leading-tight group-hover:text-[#064E3B] transition-colors">{lote.especie?.nome}</h3>
+                </div>
+                
+                <p className="text-[10px] text-gray-400 font-bold mb-4">LOTE: {lote.identificacao_lote}</p>
+                
+                <div className="mt-auto flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-400 font-bold leading-none mb-1">PREÇO</span>
+                    <span className="text-[#064E3B] font-black text-2xl tracking-tighter">{formatCOP(lote.preco_venda_estimado || 10000)}</span>
+                  </div>
+                  <div className="bg-[#064E3B] text-white p-3 rounded-2xl shadow-lg shadow-[#064E3B]/20 transform group-hover:rotate-12 transition-all">
+                    <Plus size={20} strokeWidth={3} />
                   </div>
                 </div>
               </div>

@@ -21,6 +21,7 @@ export default function EspeciesAdmin() {
   const [diasFloracao, setDiasFloracao] = useState('');
   const [nomeCientifico, setNomeCientifico] = useState('');
   const [urlFoto, setUrlFoto] = useState('');
+  const [urlFotoComercial, setUrlFotoComercial] = useState('');
   const [dificuldade, setDificuldade] = useState('Baixa');
   const [frequenciaRega, setFrequenciaRega] = useState('');
   const [tipoSolo, setTipoSolo] = useState('');
@@ -57,6 +58,7 @@ export default function EspeciesAdmin() {
         tempo_estimado_germinacao_dias: diasGerminacao ? parseInt(diasGerminacao) : null,
         tempo_estimado_floracao_dias: diasFloracao ? parseInt(diasFloracao) : null,
         url_foto: urlFoto,
+        url_foto_comercial: urlFotoComercial,
         dificuldade,
         frequencia_rega: frequenciaRega,
         tipo_solo: tipoSolo,
@@ -137,6 +139,7 @@ export default function EspeciesAdmin() {
     setDiasGerminacao(esp.tempo_estimado_germinacao_dias?.toString() || esp.dias_germinacao?.toString() || '');
     setDiasFloracao(esp.tempo_estimado_floracao_dias?.toString() || '');
     setUrlFoto(esp.url_foto || '');
+    setUrlFotoComercial(esp.url_foto_comercial || '');
     setDificuldade(esp.dificuldade || 'Baixa');
     setFrequenciaRega(esp.frequencia_rega || '');
     setTipoSolo(esp.tipoSolo || '');
@@ -157,6 +160,7 @@ export default function EspeciesAdmin() {
     setDiasGerminacao('');
     setDiasFloracao('');
     setUrlFoto('');
+    setUrlFotoComercial('');
     setDificuldade('Baixa');
     setFrequenciaRega('');
     setTipoSolo('');
@@ -218,24 +222,56 @@ export default function EspeciesAdmin() {
                  <Bot size={12}/> IA Ativa
                </div>
 
-               {/* Foto Preview Grande */}
-               <div className="space-y-2 pt-4">
-                 <div className="aspect-square bg-white border-2 border-dashed border-surface-container-highest rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
-                   {urlFoto ? (
-                     <>
-                       <img src={urlFoto} alt="Preview" className="w-full h-full object-cover" />
-                       <button type="button" onClick={() => buscarNovaFoto()} className="absolute bottom-4 right-4 p-4 bg-white/90 backdrop-blur text-black rounded-full shadow-2xl hover:scale-105 transition">
-                         <Sparkles size={20} className="text-purple-600" />
-                       </button>
-                     </>
-                   ) : (
-                     <div className="text-center p-6">
-                        <Flower2 size={48} className="mx-auto text-surface-container-highest mb-4" />
-                        <button type="button" onClick={() => buscarNovaFoto()} className="bg-primary/10 text-primary px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                          <Camera size={16}/> Buscar Foto
-                        </button>
-                     </div>
-                   )}
+               {/* Fotos: Evolutiva vs Comercial */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                 <div className="space-y-2">
+                   <label className="text-[10px] font-black text-secondary uppercase tracking-widest ml-1">Foto de Produção (Evolutiva)</label>
+                   <div className="aspect-square bg-white border-2 border-dashed border-surface-container-highest rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
+                     {urlFoto ? (
+                       <>
+                         <img src={urlFoto} alt="Preview" className="w-full h-full object-cover" />
+                         <button type="button" onClick={() => buscarNovaFoto()} className="absolute bottom-4 right-4 p-4 bg-white/90 backdrop-blur text-black rounded-full shadow-2xl hover:scale-105 transition">
+                           <Camera size={20} className="text-secondary" />
+                         </button>
+                       </>
+                     ) : (
+                       <div className="text-center p-6">
+                          <Flower2 size={32} className="mx-auto text-surface-container-highest mb-4" />
+                          <button type="button" onClick={() => buscarNovaFoto()} className="bg-secondary/10 text-secondary px-6 py-3 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                            <Camera size={14}/> Buscar Produção
+                          </button>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+
+                 <div className="space-y-2">
+                   <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Foto Comercial (PDV & Venda)</label>
+                   <div className="aspect-square bg-[#064E3B]/5 border-2 border-dashed border-[#064E3B]/20 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
+                     {urlFotoComercial ? (
+                       <>
+                         <img src={urlFotoComercial} alt="Preview Comercial" className="w-full h-full object-cover" />
+                         <button type="button" onClick={() => buscarNovaFoto('comercial')} className="absolute bottom-4 right-4 p-4 bg-[#064E3B] text-white rounded-full shadow-2xl hover:scale-105 transition">
+                           <Sparkles size={20} />
+                         </button>
+                       </>
+                     ) : (
+                       <div className="text-center p-6">
+                          <Sparkles size={32} className="mx-auto text-[#064E3B]/30 mb-4" />
+                          <button type="button" onClick={async () => {
+                            const q = nome + " plant studio photography high resolution";
+                            setLoadingAI(true);
+                            try {
+                              const res = await fetch(`/api/buscar-foto?query=${encodeURIComponent(q)}`);
+                              const data = await res.json();
+                              if (data.url) setUrlFotoComercial(data.url);
+                            } finally { setLoadingAI(false); }
+                          }} className="bg-[#064E3B] text-white px-6 py-3 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                            <Bot size={14}/> Buscar Imagem HD
+                          </button>
+                       </div>
+                     )}
+                   </div>
                  </div>
                </div>
 
