@@ -1,5 +1,5 @@
 'use client';
-import { Truck, Package, Tag, ArrowLeft, LayoutDashboard, Settings, Flower2, Briefcase, Map as MapIcon, Wifi } from 'lucide-react';
+import { Truck, Package, Tag, ArrowLeft, LayoutDashboard, Settings, Flower2, Briefcase, Map as MapIcon, Wifi, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import NotificationBell from '@/components/NotificationBell';
 import Link from 'next/link';
@@ -11,6 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const links = [
     { href: '/admin', label: t('dashboard'), icon: <LayoutDashboard size={20} /> },
+    { href: '/admin/vendas', label: t('sales'), icon: <ShoppingBag size={20} /> },
     { href: '/admin/mapa', label: t('map'), icon: <MapIcon size={20} /> },
     { href: '/admin/iot', label: t('iot'), icon: <Wifi size={20} /> },
     { href: '/admin/especies', label: t('species'), icon: <Flower2 size={20} /> },

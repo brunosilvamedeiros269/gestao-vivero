@@ -44,6 +44,7 @@ export const translations = {
     price: "Precio Sugerido",
     updating_catalog: "Actualizando Catálogo...",
     processed: "Procesados",
+    sales: "Gestión de Ventas",
   },
   pt: {
     dashboard: "Painel de Controle",
@@ -90,6 +91,7 @@ export const translations = {
     price: "Preço Sugerido",
     updating_catalog: "Atualizando Catálogo...",
     processed: "Processados",
+    sales: "Gestão de Vendas",
   },
   en: {
     dashboard: "Dashboard",
@@ -130,6 +132,7 @@ export const translations = {
     price: "Suggested Price",
     updating_catalog: "Updating Catalog...",
     processed: "Processed",
+    sales: "Sales Management",
   }
 };
 
